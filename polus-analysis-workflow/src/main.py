@@ -16,100 +16,45 @@ logger.setLevel(POLUS_LOG)
 
 # ''' Argument parsing '''
 logger.info("Parsing arguments...")
-parser = argparse.ArgumentParser(prog='main', description='Deep Feature Extraction Plugin')    
+parser = argparse.ArgumentParser(prog='main', description='Analysis Workflow')    
 #     # Input arguments
-parser.add_argument('--inputDir', dest='inputDir', type=str,
-                        help='Input image collection to be processed by this plugin', required=True)
+parser.add_argument('--DATA_DIR', dest='DATA_DIR', type=str,
+                        help='DATA_DIR containing images or stiching vectors', required=True)
 
-parser.add_argument('--outDir', dest='outDir', type=str,
-                        help='Output directory', required=True)   
+parser.add_argument('--FILEPATTREN', dest='FILEPATTREN', type=str,
+                        help='FILEPATTREN used to parse images', required=True)   
 # # Parse the arguments
 args = parser.parse_args()
-inputDir = Path(args.inputDir)
+logger.info('DATA_DIR = {}'.format(DATA_DIR))
+FILEPATTREN = str(args.FILEPATTREN) 
+logger.info('FILEPATTREN = {}'.format(FILEPATTREN))
 
-if (inputDir.joinpath('images').is_dir()):
-    inputDir = inputDir.joinpath('images').absolute()
-if (maskDir.joinpath('masks').is_dir()):
-    maskDir = maskDir.joinpath('masks').absolute()
-logger.info('inputDir = {}'.format(inputDir))
-logger.info('maskDir = {}'.format(maskDir))
-inputcsv = Path(args.inputcsv)
-logger.info('inputcsv = {}'.format(inputcsv))
-model = str(args.model) 
-logger.info('model = {}'.format(model))
-batchsize=int(args.batchsize)
-logger.info("batchsize = {}".format(batchsize))
-filename = str(args.filename) 
-logger.info('filename = {}'.format(filename))
-outDir = Path(args.outDir)
-logger.info('outDir = {}'.format(outDir))
 
-def main(inputDir:Path,
-         maskDir:Path,
-         inputcsv:Path,
-         model:str,
-         batchsize:int,
-         filename:str,
-         outDir:str
+def main(DATA_DIR:Path,
+         FILEPATTREN:str,
          ) -> None:
 
+
         starttime= time.time()
+        logger.info("Step1: FlatField Correction plugin is running")
+        Run_FlatField_Correction(DATA_DIR, FILEPATTREN)
+        outpath = os.path.join(os.path.split(DATA_DIR)[0], 'basic-flatfield-correction-outputs')
+        logger.info("Step2: Input Data Directory for Apply_FlatField_Correction".format(outpath))
+        logger.info(f'Time taken to finished Step1-2: {outpath}')
+        logger.info("Step2: Input Data Directory for Apply_FlatField_Correction".format(outpath))
+        logger.info("Step2: Apply_FlatField_Correction plugin is running")
+        Apply_FlatField_Correction(outpath,  FILEPATTREN)
             
-        model_lists =  ['Xception', 'VGG16', 'VGG19', 'ResNet50', 'ResNet101',
-                        'ResNet152','ResNet50V2','ResNet101V2','ResNet152V2','InceptionV3',
-                        'InceptionResNetV2','DenseNet121','DenseNet169','DenseNet201','EfficientNetB0',
-                        'EfficientNetB1','EfficientNetB2','EfficientNetB3','EfficientNetB4','EfficientNetB5',
-                        'EfficientNetB6','EfficientNetB7']
-        if not model in  model_lists:
-            logger.error("Invalid model selection! Please select from the list")
-        modelname = get_model(model)
-        logger.info(f'Single cell Feature Extraction using: {model} model')
-        prf = dataframe_parsing(inputcsv)
-
-        prf = prf.iloc[:200, :]
-        pf = chunker(prf, batchsize)
-        deepfeatures = []
-        for batch in pf: 
-            roi_images =[]
-            roi_labels =[]
-            for i, row in batch.iterrows():
-                dclass = deepprofiler(row, inputDir, maskDir)
-                imgname, maskname = dclass.__name__()
-                logger.info(f'Processing image: {imgname}')
-                logger.info(f'Processing mask: {maskname}')
-                logger.info(f'Processing cell: {row[2]}')
-                if row[3] == 0 and row[4] == 0 and row[5] == 0 and row[6] == 0:
-                    continue
-                imgpad = dclass.zero_padding()
-                img = np.dstack((imgpad, imgpad))
-                img = np.dstack((img, imgpad)) 
-                roi_labels.append(row['label'])
-                roi_images.append(img)
-            batch_images = np.asarray(roi_images)
-            batch_labels = roi_labels
-            dfeat = model_prediction(modelname,batch_images)
-            pdm = feature_extraction(batch_labels, row,  dfeat) 
-            deepfeatures.append(pdm)
-
-        deepfeatures = pd.concat(deepfeatures)
-        fn = renaming_columns(deepfeatures)
-        os.chdir(outDir)
-        logger.info('Saving Output CSV File')
-        fn.to_csv(filename, index = False)
-        logger.info('Finished all processes')
         endtime = (time.time() - starttime)/60
-        print(f'Total time taken to process all images: {endtime}')
-        return fn  
+        logger.info(f'Time taken to finished Step1-2: {endtime}')
+        
+                
+            
 
 
 
 
 if __name__=="__main__":
-    main(inputDir=inputDir,
-         maskDir=maskDir,
-         inputcsv=inputcsv,
-         model=model,
-         batchsize=batchsize,
-         filename=filename,
-         outDir=outDir)
+    main(DATA_DIR=DATA_DIR,
+         FILEPATTREN=FILEPATTREN)
 

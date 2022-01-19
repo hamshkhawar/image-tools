@@ -73,7 +73,7 @@ class workflow:
                     f'{TAG}/{PLUGIN_NAME}:{VERSION}',
                 ]
         command.extend(f'--{i}={o}' for i, o in ARGS.items())
- 
+
         if PLUGIN_NAME == 'nyxus':
             command = ' '.join(command)
             os.system(command)
@@ -81,19 +81,20 @@ class workflow:
             p = subprocess.Popen(command, stdout=subprocess.PIPE)
             stdout, sterr = p.communicate()
         
-
+    
 def Run_FlatField_Correction(DATA_DIR:Path,
-                              VERSION:Optional[str] = None)-> None:
+                            FILEPATTREN:str,
+                            VERSION:Optional[str] = None)-> None:
     VERSION='1.2.8'  
     PLUGIN_NAME='polus-basic-flatfield-correction-plugin'
     TAG='labshare'
 
     w = workflow(DATA_DIR,PLUGIN_NAME,VERSION, TAG)
-    _, ROOT_DIR, TARGET_DIR = w.assigning_pathnames()
+    DATA_DIRNAME, ROOT_DIR, TARGET_DIR = w.assigning_pathnames()
     outname=w.naming_outputfolder()
 
     inpDir = Path(TARGET_DIR, 'images')
-    filePattern = 'x{x+}_y{y+}_wx{t}_wy{p}_c{c}.ome.tif'
+    filePattern = FILEPATTREN
     darkfield = 'true'
     photobleach = 'false'
     groupBy= 'xytp'
@@ -110,7 +111,56 @@ def Run_FlatField_Correction(DATA_DIR:Path,
     
     w.create_output_folder()
     w.pull_docker_image()
-    workflow.run_command(PLUGIN_NAME,
+    w.run_command(PLUGIN_NAME,
+                    ROOT_DIR,
+                    TARGET_DIR,
+                    TAG,
+                    VERSION,
+                    ARGS)
+
+    return outname
+
+   
+
+
+  
+# FILEPATTREN = 'x{x+}_y{y+}_wx{t}_wy{p}_c{c}.ome.tif'
+# DATA_DIR='/home/ec2-user/data/images'
+# outname = Run_FlatField_Correction(DATA_DIR, FILEPATTREN)
+
+
+def Apply_FlatField_Correction(DATA_DIR:Path,  FILEPATTREN:str, VERSION:Optional[str] = None):
+    PLUGIN_NAME='polus-apply-flatfield-plugin'
+    VERSION='1.0.6'
+    TAG='labshare'
+    w = workflow(DATA_DIR,PLUGIN_NAME,VERSION, TAG)
+    DATA_DIRNAME, ROOT_DIR, TARGET_DIR = w.assigning_pathnames()
+    outname=w.naming_outputfolder() 
+    
+    #darkPattern='x(01-24)_y(01-16)_wx(0-2)_wy(0-2)_c{c}_darkfield.ome.tif'
+    darkPattern='x01_y01_wx(0-1)_wy(0-2)_c{c}_darkfield.ome.tif'
+    ffDir=Path(TARGET_DIR, DATA_DIRNAME, 'images')
+    #brightPattern='x(01-24)_y(01-16)_wx(0-2)_wy(0-2)_c{c}_flatfield.ome.tif'
+    brightPattern='x01_y01_wx(0-1)_wy(0-2)_c{c}_flatfield.ome.tif'
+    imgDir=Path(TARGET_DIR, 'images')
+    imgPattern=FILEPATTREN
+    #photoPattern=''
+
+    # Output paths
+    outDir = f'{TARGET_DIR}/{outname}'
+
+    ARGS = {
+            'imgDir': imgDir,
+            'imgPattern': imgPattern,
+            'ffDir': ffDir,
+            'brightPattern': brightPattern,
+            'outDir': outDir,
+            'darkPattern': darkPattern 
+    }
+
+    w.create_output_folder()
+    w.pull_docker_image()
+    w.run_command(PLUGIN_NAME,
                     ROOT_DIR,
                     TARGET_DIR,
                     TAG,
@@ -118,16 +168,10 @@ def Run_FlatField_Correction(DATA_DIR:Path,
                     ARGS)
 
 
-  
 
-DATA_DIR='/home/ec2-user/data/images'
-
-Run_FlatField_Correction(DATA_DIR)
-
-
-
-
-
+FILEPATTREN = 'x{x+}_y{y+}_wx{t}_wy{p}_c{c}.ome.tif'
+DATA_DIR = '/home/ec2-user/data/basic-flatfield-correction-outputs'
+Apply_FlatField_Correction(DATA_DIR,FILEPATTREN)
 
 
 
