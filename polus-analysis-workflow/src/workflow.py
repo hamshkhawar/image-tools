@@ -29,9 +29,9 @@ class workflow:
     def create_output_folder(self):
         outname =self.PLUGIN_NAME.split('-')[1:-1]
         if not outname:
-            outname = self.PLUGIN_NAME + '-' + 'outputs'
+            outname = self.PLUGIN_NAME 
         else:
-            outname = "-".join(outname) + '-' + 'outputs'
+            outname = "-".join(outname)
         outpath = Path(self.OUT_DIR).joinpath(outname)
         if not outpath.exists():
             os.makedirs(Path(outpath))
@@ -141,10 +141,10 @@ def Apply_FlatField_Correction(DATA_DIR:Path,  FILEPATTREN:str, OUT_DIR:Path, VE
     w = workflow(DATA_DIR,PLUGIN_NAME,VERSION, TAG, OUT_DIR)
     outname=w.create_output_folder()
     DATA_DIRNAME, ROOT_DIR, TARGET_DIR = assigning_pathnames(DATA_DIR)
-    FF_DIR = Path(TARGET_DIR, 'basic-flatfield-correction-outputs', 'images')
-    darkPattern='p00_x(01-24)_y(01-16)_wx(0-2)_wy(0-2)_c{c}_darkfield.ome.tif'
+    FF_DIR = Path(TARGET_DIR, 'basic-flatfield-correction', 'images')
+    darkPattern='p0{r}_x(01-24)_y(01-16)_wx(0-2)_wy(0-2)_c{c}_darkfield.ome.tif'
     ffDir=FF_DIR
-    brightPattern='p00_x(01-24)_y(01-16)_wx(0-2)_wy(0-2)_c{c}_flatfield.ome.tif'
+    brightPattern='p0{r}_x(01-24)_y(01-16)_wx(0-2)_wy(0-2)_c{c}_flatfield.ome.tif'
     imgDir=Path(TARGET_DIR, DATA_DIRNAME)
     imgPattern=FILEPATTREN
     #photoPattern=''
@@ -178,7 +178,7 @@ def Apply_FlatField_Correction(DATA_DIR:Path,  FILEPATTREN:str, OUT_DIR:Path, VE
 
 
 
-def Run_Montage(DATA_DIR:Path, OUT_DIR:Path, VERSION:Optional[str] = None, dryrun:bool=True):
+def Run_Montage(DATA_DIR:Path, FILEPATTREN:str, OUT_DIR:Path, VERSION:Optional[str] = None, dryrun:bool=True):
     PLUGIN_NAME='polus-montage-plugin'
     VERSION='0.3.0'
     TAG='labshare' 
@@ -187,7 +187,7 @@ def Run_Montage(DATA_DIR:Path, OUT_DIR:Path, VERSION:Optional[str] = None, dryru
     outname=w.create_output_folder()
 
     inpDir=Path(TARGET_DIR, DATA_DIRNAME)
-    filePattern='x{x+}_y{y+}_wx{t}_wy{p}_c{c}.ome.tif'
+    filePattern=FILEPATTREN
     layout='tp,xy'
     imageSpacing='1'
     gridSpacing='20'
@@ -216,18 +216,18 @@ def Run_Montage(DATA_DIR:Path, OUT_DIR:Path, VERSION:Optional[str] = None, dryru
 # Run_Montage(DATA_DIR,OUT_DIR)
 
 
-def Run_Recycle_Vector(DATA_DIR:Path, STICH_DIR:Path,  OUT_DIR:Path, VERSION:Optional[str] = None, dryrun:bool=True):
+def Run_Recycle_Vector(DATA_DIR:Path, FILEPATTREN:str, OUT_DIR:Path, VERSION:Optional[str] = None, dryrun:bool=True):
     PLUGIN_NAME='polus-recycle-vector-plugin'
     VERSION='1.4.3'
     TAG='labshare' 
     w = workflow(DATA_DIR,PLUGIN_NAME,VERSION, TAG,OUT_DIR)
     DATA_DIRNAME, ROOT_DIR, TARGET_DIR = assigning_pathnames(DATA_DIR)
-    STICHDIR_NAME, _, _ = assigning_pathnames(STICH_DIR)
     outname=w.create_output_folder()
-    stitchRegex='x{x+}_y{y+}_wx{t}_wy{p}_c{c}.ome.tif'
-    collectionRegex='x{x+}_y{y+}_wx{t}_wy{p}_c{c}.ome.tif'
-    stitchDir=Path(TARGET_DIR, STICHDIR_NAME)
+    stitchRegex=FILEPATTREN
+    collectionRegex=FILEPATTREN
+    stitchDir=Path(TARGET_DIR, 'montage')
     collectionDir=Path(TARGET_DIR, DATA_DIRNAME)
+    groupBy='xytp'
     # Output paths
     outDir = f'{TARGET_DIR}/{outname}'
 
@@ -236,6 +236,7 @@ def Run_Recycle_Vector(DATA_DIR:Path, STICH_DIR:Path,  OUT_DIR:Path, VERSION:Opt
             'collectionRegex': collectionRegex,
             'stitchDir': stitchDir,
             'collectionDir': collectionDir,
+            'groupBy':groupBy,
             'outDir': outDir
     }
 
@@ -253,16 +254,15 @@ def Run_Recycle_Vector(DATA_DIR:Path, STICH_DIR:Path,  OUT_DIR:Path, VERSION:Opt
 
 
 
-def Run_Image_Assembler(DATA_DIR:Path, STICH_DIR:Path,  OUT_DIR:Path, VERSION:Optional[str] = None, dryrun:bool=True):
+def Run_Image_Assembler(DATA_DIR:Path, OUT_DIR:Path, VERSION:Optional[str] = None, dryrun:bool=True):
     PLUGIN_NAME='polus-image-assembler-plugin'
     VERSION='1.1.2'
     TAG='labshare'
     w = workflow(DATA_DIR,PLUGIN_NAME,VERSION, TAG, OUT_DIR) 
     outname=w.create_output_folder()
     DATA_DIRNAME, ROOT_DIR, TARGET_DIR = assigning_pathnames(DATA_DIR)
-    STICHDIR_NAME, _, _ = assigning_pathnames(STICH_DIR)
   
-    stitchPath=Path(TARGET_DIR, STICHDIR_NAME)
+    stitchPath=Path(TARGET_DIR, 'recycle-vector')
     imgPath=Path(TARGET_DIR, DATA_DIRNAME)
     timesliceNaming='false'
     # Output paths
@@ -290,7 +290,7 @@ def Run_Image_Assembler(DATA_DIR:Path, STICH_DIR:Path,  OUT_DIR:Path, VERSION:Op
 # Run_Image_Assembler(DATA_DIR, STICH_DIR)
 
 
-def Run_precompute_slide(DATA_DIR:Path, IMAGETYPE:str, OUT_DIR:Path, VERSION:Optional[str] = None, dryrun:bool=True):
+def Run_precompute_slide(DATA_DIR:Path, FILEPATTREN:str, IMAGETYPE:str, OUT_DIR:Path, VERSION:Optional[str] = None, dryrun:bool=True):
     PLUGIN_NAME='polus-precompute-slide-plugin'
     VERSION='1.3.12'
     TAG='labshare' 
@@ -300,7 +300,7 @@ def Run_precompute_slide(DATA_DIR:Path, IMAGETYPE:str, OUT_DIR:Path, VERSION:Opt
 
     inpDir=Path(TARGET_DIR, DATA_DIRNAME)
     pyramidType='Neuroglancer'
-    filePattern='x(01-24)_y(01-16)_wx(0-2)_wy(0-2)_c{c}.ome.tif'
+    filePattern=FILEPATTREN
     imageType=IMAGETYPE
     # Output paths
     outDir = f'{TARGET_DIR}/{outname}'
@@ -328,7 +328,7 @@ def Run_precompute_slide(DATA_DIR:Path, IMAGETYPE:str, OUT_DIR:Path, VERSION:Opt
 
 
 
-def Run_SplineDist(DATA_DIR:Path, MODEL_DIR:Path, OUT_DIR:Path, VERSION:Optional[str] = None, dryrun:bool=True):
+def Run_SplineDist(DATA_DIR:Path, MODEL_DIR:Path, FILEPATTREN:str, OUT_DIR:Path, VERSION:Optional[str] = None, dryrun:bool=True):
     PLUGIN_NAME='polus-splinedist-inference-plugin'
     VERSION='eastman03'
     TAG='labshare'    
@@ -339,7 +339,7 @@ def Run_SplineDist(DATA_DIR:Path, MODEL_DIR:Path, OUT_DIR:Path, VERSION:Optional
 
     inpImageDir=Path(TARGET_DIR, DATA_DIRNAME)
     inpBaseDir=Path(TARGET_DIR, MODEL_DIRNAME)
-    imagePattern='x{x+}_y{y+}_wx{t}_wy{r}_c{c}.ome.tif'
+    imagePattern=FILEPATTREN
     outDir = f'{TARGET_DIR}/{outname}'
 
     ARGS = {
