@@ -1,12 +1,10 @@
+import polus.plugins
+from polus.plugins import plugins
+from polus.data import collections
 from pathlib import Path
-from queue import Empty
-import subprocess
-import typing
-from typing import List, Union, Optional, Dict
-import logging
 import os
-import re
-
+from typing import Optional
+import pathlib, logging
 
 
 logging.basicConfig(
@@ -17,487 +15,211 @@ logger = logging.getLogger('workflow')
 logger.setLevel(logging.INFO)
 
 
-class workflow:
 
-    def __init__(self, DATA_DIR:Path,PLUGIN_NAME:str,VERSION:str, TAG:str, OUT_DIR:str):
-        self.DATA_DIR = DATA_DIR
-        self.PLUGIN_NAME=PLUGIN_NAME
-        self.VERSION=PLUGIN_NAME
-        self.TAG=TAG
-        self.OUT_DIR=OUT_DIR
-
-    def create_output_folder(self):
-        outname =self.PLUGIN_NAME.split('-')[1:-1]
-        if not outname:
-            outname = self.PLUGIN_NAME 
-        else:
-            outname = "-".join(outname)
-        outpath = Path(self.OUT_DIR).joinpath(outname)
-        if not outpath.exists():
-            os.makedirs(Path(outpath))
-            logger.info(f'{outname} directory is created')
-        else:
-            logger.info(f'{outname} directory already exists')
-        return outname
-
- 
-    
-    def assigning_pathnames(self):
-        path = Path(DATA_DIR)
-        DATA_DIRNAME = path.name
-        ROOT_DIR = path.parent
-        TARGET_DIR = '/' + path.parts[-2]
-        return DATA_DIRNAME, ROOT_DIR, TARGET_DIR
-   
-    def pull_docker_image(self):
-        command = ['docker', 'pull', f'{self.TAG}/{self.PLUGIN_NAME}:{self.VERSION}'] 
-        command = " ".join(command)
-        os.system(command)
-        logger.info(f'{self.PLUGIN_NAME} Pulling docker image')
-    
-    @staticmethod
-    def run_command(PLUGIN_NAME:str, 
-                    ROOT_DIR:Path, 
-                    TARGET_DIR:Path,
-                    TAG:str, 
-                    VERSION:str, 
-                    ARGS:Dict[str, str]
-                )-> None:  
-        command = [
-                    'docker',
-                    'run',
-                    '-v',
-                    f'{ROOT_DIR}:{TARGET_DIR}',
-                    f'{TAG}/{PLUGIN_NAME}:{VERSION}',
-                ]
-        command.extend(f'--{i}={o}' for i, o in ARGS.items())
-
-        if PLUGIN_NAME == 'nyxus':
-            command = ' '.join(command)
-            os.system(command)
-        else:
-            p = subprocess.Popen(command, stdout=subprocess.PIPE)
-            stdout, sterr = p.communicate()
-
-def assigning_pathnames(dirpath:Path):
-    path = Path(dirpath)
-    DATA_DIRNAME = path.name
-    ROOT_DIR = path.parent
-    TARGET_DIR = '/' + path.parts[-2]
-    return DATA_DIRNAME, ROOT_DIR, TARGET_DIR
-        
-    
-def Run_FlatField_Correction(DATA_DIR:Path,
-                            FILEPATTREN:str,
-                            OUT_DIR:Path,
-                            VERSION:Optional[str] = None,
-                            dryrun:bool=True)-> None:
-    VERSION='1.2.8'  
-    PLUGIN_NAME='polus-basic-flatfield-correction-plugin'
-    TAG='labshare'
-    w = workflow(DATA_DIR,PLUGIN_NAME,VERSION, TAG, OUT_DIR)
-    DATA_DIRNAME, ROOT_DIR, TARGET_DIR = assigning_pathnames(DATA_DIR)
-    outname=w.create_output_folder()
-    inpDir=Path(TARGET_DIR, DATA_DIRNAME)
-    filePattern = FILEPATTREN
-    darkfield = 'true'
-    photobleach = 'false'
-    groupBy= 'xytp'
-    outDir = f'{TARGET_DIR}/{outname}'
-
-    ARGS = {
-    'inpDir': inpDir,
-    'filePattern': filePattern,
-    'darkfield': darkfield,
-    'photobleach': photobleach,
-    'groupBy': groupBy,
-    'outDir': outDir 
-}
-    
-    w.pull_docker_image()
-    
-    if dryrun:
-        w.run_command(PLUGIN_NAME,
-                    ROOT_DIR,
-                    TARGET_DIR,
-                    TAG,
-                    VERSION,
-                    ARGS)
+def create_output_folder(outDir, pluginName) -> pathlib.Path:
+    outname = '-'.join(pluginName.split()[0:-1]) + '-' + 'outputs'
+    outpath = Path(outDir, outname)
+    if not outpath.exists():
+        os.makedirs(Path(outpath))
+        f'{outname} directory is created'
+    else:
+        f'{outname} directory already exists'
+    return outpath
 
 
+def Run_FlatField_Correction(inpDir:pathlib.Path,
+                            filePattern:str,
+                            groupBy:str,
+                            outDir:pathlib.Path,
+                            dryrun:bool=True) -> None:
+    url = 'https://raw.githubusercontent.com/Nicholas-Schaub/polus-plugins/fix/flatfield/regression/polus-basic-flatfield-correction-plugin/plugin.json'
+    polus.plugins.submit_plugin(url, refresh=True)
+    pl = plugins.BasicFlatfieldCorrectionPlugin
+    pluginName = pl.name
+    pl.inpDir = inpDir
+    pl.filePattern = filePattern
+    pl.darkfield = True
+    pl.photobleach=False
+    pl.groupBy = groupBy
+    outpath = create_output_folder(outDir, pluginName)
+    pl.outDir=outpath
+    if not dryrun:
+        pl.run(gpus=None)
+    return outpath
 
+def ApplyFlatfield(inpDir:pathlib.Path,
+                            filePattern:str,
+                            outDir:pathlib.Path,
+                            ffDir:Optional[Path]=None,
+                            dryrun:bool=True) -> None:
+    url='https://raw.githubusercontent.com/Nicholas-Schaub/polus-plugins/fix/flatfield/transforms/images/polus-apply-flatfield-plugin/plugin.json'
+    polus.plugins.submit_plugin(url, refresh=True)
+    pl = plugins.ApplyFlatfield
+    pluginName = pl.name
+    pl.imgDir = inpDir
+    pl.imgPattern = filePattern
+    pl.ffDir= ffDir
+    pl.brightPattern = 'p01_x(01-24)_y(01-16)_wx(0-2)_wy(0-2)_c{c}_flatfield.ome.tif'
+    pl.darkPattern = 'p01_x(01-24)_y(01-16)_wx(0-2)_wy(0-2)_c{c}_darkfield.ome.tif'
+    pl.photoPattern = ' '
+    outpath = create_output_folder(outDir, pluginName)
+    pl.outDir=outpath
+    if not dryrun:
+        pl.run(gpus=None)
+    return outpath
 
-      
-# FILEPATTREN = 'p00_x{x+}_y{y+}_wx{t}_wy{p}_c{c}.ome.tif'
-# DATA_DIR = '/home/ec2-user/data/inputs'
-# Run_FlatField_Correction(DATA_DIR, FILEPATTREN)
+def Run_Montage(inpDir:pathlib.Path,
+                filePattern:str,
+                outDir:pathlib.Path,
+                dryrun:bool=True
+                ) -> None:
+    url='https://raw.githubusercontent.com/Nicholas-Schaub/polus-plugins/fix/montage/transforms/images/polus-montage-plugin/plugin.json'
+    polus.plugins.submit_plugin(url, refresh=True)
+    pl = plugins.Montage
+    pluginName = pl.name
+    pl.inpDir=inpDir
+    pl.filePattern=filePattern
+    pl.layout='tp', 'xy'
+    pl.imageSpacing='1'
+    pl.gridSpacing='20'
+    pl.flipAxis='p'
+    outpath = create_output_folder(outDir, pluginName)
+    pl.outDir=outpath
+    if not dryrun:
+        pl.run(gpus=None)
+    return outpath
 
+def Recycle_Vector(inpDir:pathlib.Path, stitchDir:pathlib.Path, groupBy:str, filePattern:str, outDir:pathlib.Path, VERSION:Optional[str] = None, dryrun:bool=True):
+    pl = plugins.RecycleStitchingVectorPlugin
+    pluginName = pl.name
+    pl.stitchRegex=filePattern
+    pl.collectionRegex=filePattern
+    pl.stitchDir=stitchDir
+    pl.collectionDir=inpDir
+    # groupBy='xytp'
+    pl.groupBy=groupBy
+    outpath = create_output_folder(outDir, pluginName)
+    pl.outDir=outpath
+    if not dryrun:
+        pl.run(gpus=None)
+    return outpath
 
-def Apply_FlatField_Correction(DATA_DIR:Path,  FILEPATTREN:str, OUT_DIR:Path, VERSION:Optional[str] = None, dryrun:bool=True):
+def Image_Assembler(inpDir:pathlib.Path, stitchPath:pathlib.Path, outDir:pathlib.Path, VERSION:Optional[str] = None, dryrun:bool=True):
+    pl = plugins.ImageAssembler
+    pluginName = pl.name
+    pl.stitchPath=stitchPath
+    pl.imgPath=inpDir
+    pl.timesliceNaming='false'
+    outpath = create_output_folder(outDir, pluginName)
+    pl.outDir=outpath
+    if not dryrun:
+        pl.run(gpus=None)
+    return outpath
 
-    PLUGIN_NAME='polus-apply-flatfield-plugin'
-    VERSION='1.0.6'
-    TAG='labshare'
-    w = workflow(DATA_DIR,PLUGIN_NAME,VERSION, TAG, OUT_DIR)
-    outname=w.create_output_folder()
-    DATA_DIRNAME, ROOT_DIR, TARGET_DIR = assigning_pathnames(DATA_DIR)
-    FF_DIR = Path(TARGET_DIR, 'basic-flatfield-correction', 'images')
-    darkPattern='p0{r}_x(01-24)_y(01-16)_wx(0-2)_wy(0-2)_c{c}_darkfield.ome.tif'
-    ffDir=FF_DIR
-    brightPattern='p0{r}_x(01-24)_y(01-16)_wx(0-2)_wy(0-2)_c{c}_flatfield.ome.tif'
-    imgDir=Path(TARGET_DIR, DATA_DIRNAME)
-    imgPattern=FILEPATTREN
-    #photoPattern=''
-
-    # # Output paths
-    outDir = f'{TARGET_DIR}/{outname}'
-
-    ARGS = {
-            'imgDir': imgDir,
-            'imgPattern': imgPattern,
-            'ffDir': ffDir,
-            'brightPattern': brightPattern,
-            'outDir': outDir,
-            'darkPattern': darkPattern 
-    }
-    w.pull_docker_image()
-    if dryrun:
-        w.run_command(PLUGIN_NAME,
-                    ROOT_DIR,
-                    TARGET_DIR,
-                    TAG,
-                    VERSION,
-                    ARGS)
-
-
-
-# FILEPATTREN = 'x{x+}_y{y+}_wx{t}_wy{p}_c{c}.ome.tif'
-# DATA_DIR = '/home/ec2-user/data/inputs'
-# FF_DIR='/home/ec2-user/data/basic-flatfield-correction-outputs/images'
-# Apply_FlatField_Correction(DATA_DIR,FF_DIR, FILEPATTREN)
-
-
-
-def Run_Montage(DATA_DIR:Path, FILEPATTREN:str, OUT_DIR:Path, VERSION:Optional[str] = None, dryrun:bool=True):
-    PLUGIN_NAME='polus-montage-plugin'
-    VERSION='0.3.0'
-    TAG='labshare' 
-    w = workflow(DATA_DIR,PLUGIN_NAME,VERSION, TAG,OUT_DIR)
-    DATA_DIRNAME, ROOT_DIR, TARGET_DIR = assigning_pathnames(DATA_DIR)
-    outname=w.create_output_folder()
-
-    inpDir=Path(TARGET_DIR, DATA_DIRNAME)
-    filePattern=FILEPATTREN
-    layout='tp,xy'
-    imageSpacing='1'
-    gridSpacing='20'
-    flipAxis='p'
-
+def precompute_slide(inpDir:pathlib.Path, filePattern:str, imageType:str, outDir:pathlib.Path, VERSION:Optional[str] = None, dryrun:bool=True):
+    pl = plugins.PolusPrecomputeSlidePlugin
+    pluginName = pl.name
+    pl.inpDir = inpDir
+    pl.pyramidType='Neuroglancer'
+    pl.filePattern=filePattern
+    pl.imageType=imageType
     # Output paths
-    outDir = f'{TARGET_DIR}/{outname}'
+    outpath = create_output_folder(outDir, pluginName)
+    pl.outDir=outpath
+    if not dryrun:
+        pl.run(gpus=None)
+    return outpath
 
-    ARGS = {
-            'filePattern': filePattern,
-            'inpDir': inpDir,
-            'flipAxis': flipAxis,
-            'layout': layout,
-            'outDir': outDir
-    }
-    w.pull_docker_image()
-    if dryrun:
-        w.run_command(PLUGIN_NAME,
-                    ROOT_DIR,
-                    TARGET_DIR,
-                    TAG,
-                    VERSION,
-                    ARGS)
+def SplineDist(inpDir:pathlib.Path, filePattern:str, modelDir:pathlib.Path, outDir:pathlib.Path, VERSION:Optional[str] = None, dryrun:bool=True):
+    url = Path('/home/ec2-user/data/manifest/splinedist.json')
+    polus.plugins.submit_plugin(url, refresh=True)
+    pl = plugins.SplinedistInferencePlugin
+    pluginName = pl.name
+    pl.inpImageDir=inpDir
+    pl.inpBaseDir=modelDir
+    imagePattern=filePattern
+    outpath = create_output_folder(outDir, pluginName)
+    pl.outDir=outpath
+    if not dryrun:
+        pl.run(gpus=None)
+    return outpath
 
-# DATA_DIR='/home/ec2-user/data/apply-flatfield-outputs'
-# Run_Montage(DATA_DIR,OUT_DIR)
-
-
-def Run_Recycle_Vector(DATA_DIR:Path, FILEPATTREN:str, OUT_DIR:Path, VERSION:Optional[str] = None, dryrun:bool=True):
-    PLUGIN_NAME='polus-recycle-vector-plugin'
-    VERSION='1.4.3'
-    TAG='labshare' 
-    w = workflow(DATA_DIR,PLUGIN_NAME,VERSION, TAG,OUT_DIR)
-    DATA_DIRNAME, ROOT_DIR, TARGET_DIR = assigning_pathnames(DATA_DIR)
-    outname=w.create_output_folder()
-    stitchRegex=FILEPATTREN
-    collectionRegex=FILEPATTREN
-    stitchDir=Path(TARGET_DIR, 'montage')
-    collectionDir=Path(TARGET_DIR, DATA_DIRNAME)
-    groupBy='xytp'
-    # Output paths
-    outDir = f'{TARGET_DIR}/{outname}'
-
-    ARGS = {
-            'stitchRegex': stitchRegex,
-            'collectionRegex': collectionRegex,
-            'stitchDir': stitchDir,
-            'collectionDir': collectionDir,
-            'groupBy':groupBy,
-            'outDir': outDir
-    }
-
-    w.pull_docker_image()
-    if dryrun:
-        w.run_command(PLUGIN_NAME,
-                ROOT_DIR,
-                TARGET_DIR,
-                TAG,
-                VERSION,
-                ARGS)
-# DATA_DIR = '/home/ec2-user/data/apply-flatfield-outputs'
-# STICH_DIR = '/home/ec2-user/data/montage-outputs'
-# Run_Recycle_Vector(DATA_DIR, STICH_DIR)
+def ImagenetModelFeaturization(inpDir:pathlib.Path, model:str, resolution:str, outDir:pathlib.Path, VERSION:Optional[str] = None, dryrun:bool=True):
+    models = ['Xception', 'VGG16', 'VGG19', 'ResNet50', 'ResNet101', 'ResNet152',
+     'ResNet50V2', 'ResNet101V2', 'ResNet152V2', 'InceptionV3', 
+     'InceptionResNetV2', 'DenseNet121', 'DenseNet169', 'DenseNet201']
+    assert model in models   
+    pl = plugins.ImagenetModelFeaturization
+    pluginName = pl.name
+    pl.inpDir = inpDir
+    pl.model = model
+    pl.resolution = resolution
+    outpath = create_output_folder(outDir, pluginName)
+    pl.outDir=outpath
+    if not dryrun:
+        pl.run(gpus=None)
+    return outpath
 
 
+def cellposeInference(inpDir:pathlib.Path, filePattern:str, model:str, resolution:str, outDir:pathlib.Path, VERSION:Optional[str] = None, dryrun:bool=True):
+    url = 'https://raw.githubusercontent.com/nishaq503/polus-plugins/plugin/cellpose-inference/segmentation/polus-cellpose-inference-plugin/plugin.json'
+    polus.plugins.submit_plugin(url, refresh=True)
+    pl = plugins.CellposeInference
+    pluginName = pl.name
+    pl.inpDir = inpDir
+    pl.filePattern = filePattern
+    pl.diameterMode='PixelSize'
+    pl.pretrainedModel = 'nuclei'
+    outpath = create_output_folder(outDir, pluginName)
+    pl.outDir=outpath
+    if not dryrun:
+        pl.run(gpus=None)
+    return outpath
 
-def Run_Image_Assembler(DATA_DIR:Path, OUT_DIR:Path, VERSION:Optional[str] = None, dryrun:bool=True):
-    PLUGIN_NAME='polus-image-assembler-plugin'
-    VERSION='1.1.2'
-    TAG='labshare'
-    w = workflow(DATA_DIR,PLUGIN_NAME,VERSION, TAG, OUT_DIR) 
-    outname=w.create_output_folder()
-    DATA_DIRNAME, ROOT_DIR, TARGET_DIR = assigning_pathnames(DATA_DIR)
-  
-    stitchPath=Path(TARGET_DIR, 'recycle-vector')
-    imgPath=Path(TARGET_DIR, DATA_DIRNAME)
-    timesliceNaming='false'
-    # Output paths
-    outDir = f'{TARGET_DIR}/{outname}'
-
-    ARGS = {
-            'stitchPath': stitchPath,
-            'imgPath': imgPath,
-            'outDir': outDir,
-            'timesliceNaming': timesliceNaming
-           
-    }
-    w.pull_docker_image()
-    if dryrun:
-        w.run_command(PLUGIN_NAME,
-                ROOT_DIR,
-                TARGET_DIR,
-                TAG,
-                VERSION,
-                ARGS)
-  
-
-# DATA_DIR = '/home/ec2-user/data/apply-flatfield-outputs'
-# STICH_DIR = '/home/ec2-user/data/recycle-vector-outputs'
-# Run_Image_Assembler(DATA_DIR, STICH_DIR)
+def SMP_training_inference(inpDir:pathlib.Path, filePattern:str, model:pathlib.Path, resolution:str, outDir:pathlib.Path, VERSION:Optional[str] = None, dryrun:bool=True):
+    url = 'https://raw.githubusercontent.com/nishaq503/polus-plugins/plugin/smp-training/segmentation/polus-smp-training-plugin/plugin.json'
+    polus.plugins.submit_plugin(url, refresh=True)
+    pl = plugins.DemoSMPTrainingInference
+    pluginName = pl.name
+    pl.imagesInferenceDir = inpDir
+    pl.inferencePattern = filePattern
+    pl.inferenceMode=True
+    pl.pretrainedModel = model
+    outpath = create_output_folder(outDir, pluginName)
+    pl.outDir=outpath
+    if not dryrun:
+        pl.run(gpus=None)
+    return outpath
 
 
-def Run_precompute_slide(DATA_DIR:Path, FILEPATTREN:str, IMAGETYPE:str, OUT_DIR:Path, VERSION:Optional[str] = None, dryrun:bool=True):
-    PLUGIN_NAME='polus-precompute-slide-plugin'
-    VERSION='1.3.12'
-    TAG='labshare' 
-    w = workflow(DATA_DIR,PLUGIN_NAME,VERSION, TAG,OUT_DIR) 
-    outname = w.create_output_folder()
-    DATA_DIRNAME, ROOT_DIR, TARGET_DIR = assigning_pathnames(DATA_DIR)
+def FtlLabel(inpDir:pathlib.Path, outDir:pathlib.Path, connectivity:Optional[int] = 1, binarizationThreshold:Optional[int] = 0.5, VERSION:Optional[str] = None, dryrun:bool=True):
+    url = 'https://raw.githubusercontent.com/PolusAI/polus-plugins/master/transforms/images/polus-ftl-label-plugin/plugin.json'
+    polus.plugins.submit_plugin(url, refresh=True)
+    pl = plugins.FtlLabel
+    pluginName = pl.name
+    pl.inpDir = inpDir
+    pl.connectivity = connectivity
+    pl.binarizationThreshold=binarizationThreshold
+    outpath = create_output_folder(outDir, pluginName)
+    pl.outDir=outpath
+    if not dryrun:
+        pl.run(gpus=None)
+    return outpath
 
-    inpDir=Path(TARGET_DIR, DATA_DIRNAME)
-    pyramidType='Neuroglancer'
-    filePattern=FILEPATTREN
-    imageType=IMAGETYPE
-    # Output paths
-    outDir = f'{TARGET_DIR}/{outname}'
-
-    ARGS = {
-            'inpDir': inpDir,
-            'pyramidType': pyramidType,
-            'filePattern': filePattern,
-            'imageType': imageType,
-            'outDir':outDir
-           
-    }
-    w.pull_docker_image()
-    if dryrun:
-            w.run_command(PLUGIN_NAME,
-                ROOT_DIR,
-                TARGET_DIR,
-                TAG,
-                VERSION,
-                ARGS)
-
-# DATA_DIR = '/home/ec2-user/data/image-assembler-outputs'
-# IMAGETYPE='image'
-# Run_precompute_slide(DATA_DIR, IMAGETYPE)
+def Nyxus(inpDir:pathlib.Path, segDir:pathlib.Path, filePattern:str, csvFile:str, outDir:pathlib.Path, features:Optional[str] = "*ALL*", VERSION:Optional[str] = None, dryrun:bool=True):
+    url = 'https://raw.githubusercontent.com/friskluft/nyxus/main/plugin.json'
+    polus.plugins.submit_plugin(url, refresh=True)
+    pl = plugins.Nyxus
+    pluginName = pl.name
+    pl.intDir = inpDir
+    pl.segDir = segDir
+    pl.filePattern = ".*"
+    pl.csvFile=csvFile
+    pl.features = features
+    outpath = create_output_folder(outDir, pluginName)
+    pl.outDir=outpath
+    if not dryrun:
+        pl.run(gpus=None)
+    return outpath
 
 
-
-def Run_SplineDist(DATA_DIR:Path, MODEL_DIR:Path, FILEPATTREN:str, OUT_DIR:Path, VERSION:Optional[str] = None, dryrun:bool=True):
-    PLUGIN_NAME='polus-splinedist-inference-plugin'
-    VERSION='eastman03'
-    TAG='labshare'    
-    w = workflow(DATA_DIR,PLUGIN_NAME,VERSION, TAG,OUT_DIR) 
-    outname = w.create_output_folder()
-    DATA_DIRNAME, ROOT_DIR, TARGET_DIR = assigning_pathnames(DATA_DIR)
-    MODEL_DIRNAME, _, _ = assigning_pathnames(MODEL_DIR)
-
-    inpImageDir=Path(TARGET_DIR, DATA_DIRNAME)
-    inpBaseDir=Path(TARGET_DIR, MODEL_DIRNAME)
-    imagePattern=FILEPATTREN
-    outDir = f'{TARGET_DIR}/{outname}'
-
-    ARGS = {
-            'inpImageDir': inpImageDir,
-            'inpBaseDir': inpBaseDir,
-            'imagePattern':imagePattern,
-            'outDir': outDir
-    }
-
-    w.create_output_folder()
-    w.pull_docker_image()
-    if dryrun:
-            w.run_command(PLUGIN_NAME,
-                ROOT_DIR,
-                TARGET_DIR,
-                TAG,
-                VERSION,
-                ARGS)
-# DATA_DIR = '/home/ec2-user/data/apply-outputs'
-# Run_SplineDist(DATA_DIR, MODEL_DIRNAME='model')
-
-
-def Run_Nyxus(DATA_DIR:Path, SEG_DIR:Path, FEATURES_TYPE:str, OUT_DIR:Path, VERSION:Optional[str] = None, dryrun:bool=True):
-    PLUGIN_NAME='nyxus'
-    VERSION='0.2.4'
-    TAG='polusai'
-    w = workflow(DATA_DIR,PLUGIN_NAME,VERSION, TAG,OUT_DIR) 
-    outname = w.create_output_folder()
-    DATA_DIRNAME, ROOT_DIR, TARGET_DIR = assigning_pathnames(DATA_DIR)
-    SEG_DIRNAME, _, _ = assigning_pathnames(SEG_DIR)
-    outDir = f'{TARGET_DIR}/{outname}'
-    w.create_output_folder()
-    
-    intDir=Path(TARGET_DIR, DATA_DIRNAME)
-    if FEATURES_TYPE == 'Images':
-        segDir = intDir
-    else:  
-        segDir=Path(TARGET_DIR, SEG_DIRNAME)
-    filePattern='.*c2\.ome\.tif'
-    csvFile='singlecsv'
-    features='*ALL_INTENSITY*'
-    # features='*BASIC_MORPHOLOGY*'
-    outDir = f'{TARGET_DIR}/{outname}'
-    
-
-    ARGS = {
-            'intDir': intDir,
-            'segDir': segDir,
-            'outDir': outDir,
-            'filePattern': filePattern,
-            'csvFile': csvFile,
-            'features': features
-    }
-
-    w.pull_docker_image()
-    if dryrun:
-            w.run_command(PLUGIN_NAME,
-                ROOT_DIR,
-                TARGET_DIR,
-                TAG,
-                VERSION,
-                ARGS)
-    
-
-# DATA_DIR='/home/ec2-user/data/images'
-
-# SEG_DIR='/home/ec2-user/data/labels'
-
-# Run_Nyxus(DATA_DIR, SEG_DIR, FEATURES_TYPE = 'labels')
-
-
-def Run_Imagenet_Model_Featurization(DATA_DIR:Path,
-                                    OUT_DIR:Path, 
-                                    model:str, 
-                                    resolution:str, 
-                                    VERSION:Optional[str] = None,
-                                    dryrun:bool=True):
-    PLUGIN_NAME='polus-imagenet-model-featurization-plugin'
-    VERSION='0.1.2'
-    TAG='labshare'    
-    w = workflow(DATA_DIR,PLUGIN_NAME,VERSION, TAG,OUT_DIR) 
-    outname = w.create_output_folder()
-    DATA_DIRNAME, ROOT_DIR, TARGET_DIR = assigning_pathnames(DATA_DIR)
-    
-    inpDir=Path(TARGET_DIR, DATA_DIRNAME)
-    outDir = f'{TARGET_DIR}/{outname}'
-    
-    ARGS = {
-            'inpDir': inpDir,
-            'outDir':outDir,
-            'model': model,
-            'resolution': resolution
-    }
-    w.pull_docker_image()
-    if dryrun:
-            w.run_command(PLUGIN_NAME,
-                ROOT_DIR,
-                TARGET_DIR,
-                TAG,
-                VERSION,
-                ARGS)
-    
-    
-# DATA_DIR='/home/ec2-user/data/images'
-# Run_Imagenet_Model_Featurization(DATA_DIR, model='VGG19', resolution='500x500')
-
-def Run_DeepProfiler(DATA_DIR:Path,
-                    LABEL_DIR:Path,
-                    FEAT_DIR:Path,
-                    model:str, 
-                    batchSize:int,
-                    OUT_DIR:Path, 
-                    VERSION:Optional[str] = None,
-                    dryrun:bool=True):
-    PLUGIN_NAME='polus-deep-profiler-plugin'
-    VERSION='0.1.6'
-    TAG='polusai'    
-    w = workflow(DATA_DIR,PLUGIN_NAME,VERSION, TAG,OUT_DIR) 
-    outname = w.create_output_folder()
-    DATA_DIRNAME, ROOT_DIR, TARGET_DIR = assigning_pathnames(DATA_DIR)
-    LABEL_DIRNAME, _, _ = assigning_pathnames(LABEL_DIR)
-    FEAT_DIRNAME, _, _ = assigning_pathnames(FEAT_DIR)
-   
-    
-    inputDir=Path(TARGET_DIR, DATA_DIRNAME)
-    maskDir=Path(TARGET_DIR, LABEL_DIRNAME)
-    featDir=Path(TARGET_DIR, FEAT_DIRNAME)
-    outDir = f'{TARGET_DIR}/{outname}'
-    
-    ARGS = {
-            'inputDir': inputDir,
-            'maskDir': maskDir,
-            'featDir':featDir,
-            'model': model,
-            'batchSize': batchSize,
-            'outDir': outDir
-            
-    }
-
-    w.create_output_folder()
-    w.pull_docker_image()
-    if dryrun:
-            w.run_command(PLUGIN_NAME,
-                ROOT_DIR,
-                TARGET_DIR,
-                TAG,
-                VERSION,
-                ARGS)
-    
-                    
-# DATA_DIR='/home/ec2-user/data/images'
-# LABEL_DIR='/home/ec2-user/data/labels'
-# FEAT_DIR='/home/ec2-user/data/nyxus-outputs_labels'
-# model='VGG16'
-# batchSize=8
-
-# Run_DeepProfiler(DATA_DIR,
-#                     LABEL_DIR,
-#                     FEAT_DIR,
-#                     model,
-#                     batchSize)
