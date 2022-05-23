@@ -35,7 +35,9 @@ parser.add_argument('--model', dest='model', type=str,
 parser.add_argument('--resolution', dest='groupBy', type=str,
                         help='image resolution use for imagenet model featureization plugin', required=False) 
 parser.add_argument('--modelDir', dest='modelDir', type=str,
-                        help='Path to Tranined model', required=True)     
+                        help='Path to Tranined model', required=True)
+parser.add_argument('--platesNum', dest='platesNum', type=int,
+                        help='Total number of 384-well plates', required=True)         
 parser.add_argument('--outDir', dest='outDir', type=str,
                         help='outDir used to collect outputs', required=True)   
 # # Parse the arguments
@@ -52,6 +54,8 @@ resolution= str(args.model)
 logger.info('resolution = {}'.format(model))
 modelDir = Path(args.modelDir) 
 logger.info('modelDir = {}'.format(modelDir))
+platesNum= int(args.platesNum) 
+logger.info('platesNum = {}'.format(platesNum))
 outDir = args.outDir
 logger.info('outDir = {}'.format(outDir))
 
@@ -60,51 +64,54 @@ def main(data:str,
         filePattern:str,
         groupBy:str,
         modelDir:Path,
+        platesNum:int,
         outDir:Path,
         model:Optional[str]=None,
         resolution:Optional[str]=None
          ) -> None:
         starttime= time.time()
 
-        platesNum=4
-        plates = [str(i).zfill(2) for i in range(0, platesNum+1)]
-        plate = plates[1]
-        filePattern = '{0}{1}_{2}'.format('p', plates, '_'.join((filePattern.split('_')[1:])))
-        logger.info("Running Workflow for plate:{plate}, filePattern:{filePattern}")
-        logger.info("Step1: Loading image data collection")
-        inpDir = collections[data].standard.intensity.path
-        logger.info("Step2: FlatField Correction plugin is running")
-        outpath  = Run_FlatField_Correction(inpDir, filePattern,groupBy, outDir, dryrun=True)
-        logger.info("Step2: Finished Running FlatField Estimation")
-        logger.info("Step3: Apply_FlatField_Correction plugin is running")
-        corrDir = ApplyFlatfield(inpDir=inpDir, filePattern=filePattern,outDir=outDir,ffDir=outpath, dryrun=True)
-        logger.info("Step3: Finished Running ApplyFlatField_Correction plugin")   
-        logger.info("Step4: SMP_training_inference plugin is running ")
-        filePattern='p01_x{x+}_y{y+}_wx{t}_wy{p}_c1.ome.tif'
-        segDir = SMP_training_inference(inpDir=corrDir, filePattern=filePattern, modelDir=modelDir, outDir=outDir,dryrun=True)
-        logger.info("Step4: Finished Running SMP_training_inference plugin")
-        logger.info("Step5: FtlLabel plugin is running")
-        segDir = '/home/ec2-user/data/polus_smp_training_outputs'
-        segDir = FtlLabel(inpDir=segDir, outDir=outDir, dryrun=False)
-        logger.info("Step5: Finished Running FtlLabel plugin")
-        logger.info("Step6: Rename of files for channel")
-        segDir = rename_files(inpDir=segDir)
-        logger.info("Step6: Finish Renaming of files for channel")
-        logger.info("Step7: Nyxus plugin is Running")
-        filePattern='.*c2\.ome\.tif'
-        outpath = Nyxus_exe(inpDir=corrDir, segDir=segDir, filePattern=filePattern, outDir=outDir, dryrun=False)
-        logger.info("Step7: Finished Running Nyxus plugin")
-        analysis_worflow(inpDir=outpath, plate=plate, outDir=outDir)
-        endtime = (time.time() - starttime)/60
-        logger.info(f'Time taken to finished Step1-2: {endtime}')
-  
+        if platesNum > 1:
+            plates = [str(i).zfill(2) for i in range(0, platesNum+1)]
+        else:
+            plates = [str(i).zfill(2) for i in range(0, platesNum)]
             
-
+        for plate in plates:
+            filePattern = '{0}{1}_{2}'.format('p', plate, '_'.join((filePattern.split('_')[1:])))
+            logger.info("Running Workflow for plate:{plate}, filePattern:{filePattern}")
+            logger.info("Step1: Loading image data collection")
+            inpDir = collections[data].standard.intensity.path
+            logger.info("Step2: FlatField Correction plugin is running")
+            outpath  = Run_FlatField_Correction(inpDir, filePattern,groupBy, outDir, dryrun=True)
+            logger.info("Step2: Finished Running FlatField Estimation")
+            logger.info("Step3: Apply_FlatField_Correction plugin is running")
+            corrDir = ApplyFlatfield(inpDir=inpDir, filePattern=filePattern,outDir=outDir,ffDir=outpath, dryrun=True)
+            logger.info("Step3: Finished Running ApplyFlatField_Correction plugin")   
+            logger.info("Step4: SMP_training_inference plugin is running ")
+            filePattern='p01_x{x+}_y{y+}_wx{t}_wy{p}_c1.ome.tif'
+            segDir = SMP_training_inference(inpDir=corrDir, filePattern=filePattern, modelDir=modelDir, outDir=outDir,dryrun=True)
+            logger.info("Step4: Finished Running SMP_training_inference plugin")
+            logger.info("Step5: FtlLabel plugin is running")
+            segDir = '/home/ec2-user/data/polus_smp_training_outputs'
+            segDir = FtlLabel(inpDir=segDir, outDir=outDir, dryrun=False)
+            logger.info("Step5: Finished Running FtlLabel plugin")
+            logger.info("Step6: Rename of files for channel")
+            segDir = rename_files(inpDir=segDir)
+            logger.info("Step6: Finish Renaming of files for channel")
+            logger.info("Step7: Nyxus plugin is Running")
+            filePattern='.*c2\.ome\.tif'
+            outpath = Nyxus_exe(inpDir=corrDir, segDir=segDir, filePattern=filePattern, outDir=outDir, dryrun=False)
+            logger.info("Step7: Finished Running Nyxus plugin")
+            analysis_worflow(inpDir=outpath, plate=plate, outDir=outDir)
+            endtime = (time.time() - starttime)/60
+            logger.info(f'Time taken to finished Step1-2: {endtime}')
+    
 if __name__=="__main__":
     main(data=data,
         filePattern=filePattern,
         groupBy=groupBy,
         modelDir=modelDir,
+        platesNum=platesNum,
         outDir=outDir,
         model=model,
         resolution=resolution)
