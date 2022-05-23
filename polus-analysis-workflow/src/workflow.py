@@ -72,7 +72,7 @@ def run_command(pluginName:str,
         p = subprocess.Popen(command, stdout=subprocess.PIPE)
         stdout, sterr = p.communicate()
 
-    return
+    return command
 
 def Run_FlatField_Correction(inpDir:pathlib.Path,
                             filePattern:str,
@@ -83,12 +83,13 @@ def Run_FlatField_Correction(inpDir:pathlib.Path,
     polus.plugins.submit_plugin(url, refresh=True)
     pl = plugins.BasicFlatfieldCorrectionPlugin
     pluginName = pl.name
+    pluginName = '_'.join(pluginName.split())
     pl.inpDir = inpDir
     pl.filePattern = filePattern
     pl.darkfield = True
     pl.photobleach=False
     pl.groupBy = groupBy
-    outpath = create_output_folder(outDir, pluginName)
+    outpath, outname = create_output_folder(outDir, pluginName)
     pl.outDir=outpath
     if not dryrun:
         pl.run(gpus=None)
@@ -104,13 +105,14 @@ def ApplyFlatfield(inpDir:pathlib.Path,
     polus.plugins.submit_plugin(url, refresh=True)
     pl = plugins.ApplyFlatfield
     pluginName = pl.name
+    pluginName = '_'.join(pluginName.split())
     pl.imgDir = inpDir
     pl.imgPattern = filePattern
     pl.ffDir= ffDir
     pl.brightPattern = 'p01_x(01-24)_y(01-16)_wx(0-2)_wy(0-2)_c{c}_flatfield.ome.tif'
     pl.darkPattern = 'p01_x(01-24)_y(01-16)_wx(0-2)_wy(0-2)_c{c}_darkfield.ome.tif'
     pl.photoPattern = ''
-    outpath = create_output_folder(outDir, pluginName)
+    outpath, outname = create_output_folder(outDir, pluginName)
     pl.outDir=outpath
     if not dryrun:
         pl.run(gpus=None)
@@ -132,7 +134,7 @@ def Run_Montage(inpDir:pathlib.Path,
     pl.imageSpacing=1
     pl.gridSpacing=20
     pl.flipAxis='p'
-    outpath = create_output_folder(outDir, pluginName)
+    outpath, outname = create_output_folder(outDir, pluginName)
     pl.outDir=outpath
     if not dryrun:
         pl.run(gpus=None)
@@ -144,7 +146,7 @@ def Recycle_Vector(inpDir:pathlib.Path, stitchDir:pathlib.Path, filePattern:str,
     pl.filepattern=filePattern
     pl.stitchDir=stitchDir
     pl.collectionDir=inpDir
-    outpath = create_output_folder(outDir, pluginName)
+    outpath, outname = create_output_folder(outDir, pluginName)
     pl.outDir=outpath
     if not dryrun:
         pl.run(gpus=None)
@@ -158,7 +160,7 @@ def Image_Assembler(inpDir:pathlib.Path, stitchPath:pathlib.Path, outDir:pathlib
     pl.stitchPath=stitchPath
     pl.imgPath=inpDir
     pl.timesliceNaming='false'
-    outpath = create_output_folder(outDir, pluginName)
+    outpath, outname = create_output_folder(outDir, pluginName)
     pl.outDir=outpath
     if not dryrun:
         pl.run(gpus=None)
@@ -172,7 +174,7 @@ def precompute_slide(inpDir:pathlib.Path, filePattern:str, imageType:str, outDir
     pl.filePattern=filePattern
     pl.imageType=imageType
     # Output paths
-    outpath = create_output_folder(outDir, pluginName)
+    outpath, outname = create_output_folder(outDir, pluginName)
     pl.outDir=outpath
     if not dryrun:
         pl.run(gpus=None)
@@ -186,7 +188,7 @@ def SplineDist(inpDir:pathlib.Path, filePattern:str, modelDir:pathlib.Path, outD
     pl.inpImageDir=inpDir
     pl.inpBaseDir=modelDir
     pl.imagePattern=filePattern
-    outpath = create_output_folder(outDir, pluginName)
+    outpath, outname = create_output_folder(outDir, pluginName)
     pl.outDir=outpath
     if not dryrun:
         pl.run(gpus=None)
@@ -202,7 +204,7 @@ def ImagenetModelFeaturization(inpDir:pathlib.Path, model:str, resolution:str, o
     pl.inpDir = inpDir
     pl.model = model
     pl.resolution = resolution
-    outpath = create_output_folder(outDir, pluginName)
+    outpath, outname = create_output_folder(outDir, pluginName)
     pl.outDir=outpath
     if not dryrun:
         pl.run(gpus=None)
@@ -219,7 +221,7 @@ def cellposeInference(inpDir:pathlib.Path, filePattern:str,outDir:pathlib.Path, 
     pl.diameter=0
     pl.diameterMode='PixelSize'
     pl.pretrainedModel = 'nuclei'
-    outpath = create_output_folder(outDir, pluginName)
+    outpath, outname = create_output_folder(outDir, pluginName)
     pl.outDir=outpath
     if not dryrun:
         pl.run(gpus=None)
@@ -235,7 +237,7 @@ def cellposeInference(inpDir:pathlib.Path, filePattern:str,outDir:pathlib.Path, 
 #     pl.inferencePattern = filePattern
 #     pl.inferenceMode=True
 #     pl.pretrainedModel = model
-#     outpath = create_output_folder(outDir, pluginName)
+#     outpath, outname = create_output_folder(outDir, pluginName)
 #     pl.outDir=outpath
 #     if not dryrun:
 #         pl.run(gpus=None)
@@ -247,7 +249,7 @@ def SMP_training_inference(inpDir:pathlib.Path, filePattern:str, modelDir:pathli
     version= '0.5.6'
     tag='labshare'
     pull_docker_image(pluginName, version, tag)
-    _, outname=create_output_folder(outDir, pluginName)
+    outpath, outname=create_output_folder(outDir, pluginName)
     root_dir=os.path.split(inpDir)[0]
     inpDir = os.path.split(inpDir)[-1]
     model_dir = os.path.split(modelDir)[-1]
@@ -267,7 +269,7 @@ def SMP_training_inference(inpDir:pathlib.Path, filePattern:str, modelDir:pathli
 
     removing_volume(volume_name)
 
-    return 
+    return outpath
 
 def FtlLabel(inpDir:pathlib.Path, outDir:pathlib.Path, VERSION:Optional[str] = None, dryrun:bool=True):
     # url = 'https://raw.githubusercontent.com/nishaq503/polus-plugins/ftl/feat/binarization-threshold/transforms/images/polus-ftl-label-plugin/plugin.json'
@@ -275,10 +277,11 @@ def FtlLabel(inpDir:pathlib.Path, outDir:pathlib.Path, VERSION:Optional[str] = N
     polus.plugins.submit_plugin(url, refresh=True)
     pl = plugins.FtlLabel
     pluginName = pl.name
+    pluginName = '_'.join(pluginName.split())
     pl.inpDir = inpDir
     pl.connectivity = '1'
     pl.binarizationThreshold='0.5'
-    outpath = create_output_folder(outDir, pluginName)
+    outpath, outname = create_output_folder(outDir, pluginName)
     pl.outDir=outpath
     if not dryrun:
         pl.run(gpus=None)
@@ -304,7 +307,7 @@ def FtlLabel(inpDir:pathlib.Path, outDir:pathlib.Path, VERSION:Optional[str] = N
 def Nyxus_exe(inpDir:pathlib.Path, segDir:pathlib.Path, filePattern:str, outDir:pathlib.Path, dryrun:bool=True):
     pluginName='nyxus'
     outDir, outname=create_output_folder(outDir, pluginName)
-    filePattern='.*'
+    filePattern=filePattern
     features="*all*"
     csvFile="separatecsv"
     ARGS = {
@@ -322,6 +325,13 @@ def Nyxus_exe(inpDir:pathlib.Path, segDir:pathlib.Path, filePattern:str, outDir:
     command = ' '.join(command)
     if not dryrun:
         os.system(command)
-    return 
+    return outDir
+
+def rename_files(inpDir:pathlib.Path):
+    for files in os.listdir(inpDir):
+        if files.endswith('c1.ome.tif'):
+            replace_name = files[:-9] + '2.ome.tif'
+            os.rename(pathlib.Path(inpDir, files), pathlib.Path(inpDir, replace_name))
+    return inpDir
 
 
