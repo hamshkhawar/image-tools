@@ -6,6 +6,7 @@ import os
 from typing import Optional, Dict
 import pathlib, logging
 import subprocess
+import torch
 
 
 logging.basicConfig(
@@ -14,6 +15,15 @@ logging.basicConfig(
 )
 logger = logging.getLogger('workflow')
 logger.setLevel(logging.INFO)
+
+
+device =  torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+if device == "cpu":
+    gpus = None
+else:
+    gpus = torch.cuda.device_count()
+    
+logger.info(f'device:{device}, gpus:{gpus}')
 
 
 def create_output_folder(outDir, pluginName) -> pathlib.Path:
@@ -60,7 +70,8 @@ def run_command(pluginName:str,
     command = [
                 'docker',
                 'run',
-                '-v',
+                '--gpus all',
+                '-it',
                 f'{root_dir}:/{volume_name}',
                 f'{tag}/{pluginName}:{version}'
             ]
@@ -92,7 +103,7 @@ def Run_FlatField_Correction(inpDir:pathlib.Path,
     outpath, outname = create_output_folder(outDir, pluginName)
     pl.outDir=outpath
     if not dryrun:
-        pl.run(gpus=None)
+        pl.run(gpus=gpus)
     newpath = Path(outpath, 'images')
     return newpath
 
@@ -115,7 +126,7 @@ def ApplyFlatfield(inpDir:pathlib.Path,
     outpath, outname = create_output_folder(outDir, pluginName)
     pl.outDir=outpath
     if not dryrun:
-        pl.run(gpus=None)
+        pl.run(gpus=gpus)
     return outpath
 
 def Run_Montage(inpDir:pathlib.Path,
@@ -137,7 +148,7 @@ def Run_Montage(inpDir:pathlib.Path,
     outpath, outname = create_output_folder(outDir, pluginName)
     pl.outDir=outpath
     if not dryrun:
-        pl.run(gpus=None)
+        pl.run(gpus=gpus)
     return outpath
 
 def Recycle_Vector(inpDir:pathlib.Path, stitchDir:pathlib.Path, filePattern:str, outDir:pathlib.Path, VERSION:Optional[str] = None, dryrun:bool=True):
@@ -149,7 +160,7 @@ def Recycle_Vector(inpDir:pathlib.Path, stitchDir:pathlib.Path, filePattern:str,
     outpath, outname = create_output_folder(outDir, pluginName)
     pl.outDir=outpath
     if not dryrun:
-        pl.run(gpus=None)
+        pl.run(gpus=gpus)
     return outpath
 
 def Image_Assembler(inpDir:pathlib.Path, stitchPath:pathlib.Path, outDir:pathlib.Path, VERSION:Optional[str] = None, dryrun:bool=True):
@@ -163,7 +174,7 @@ def Image_Assembler(inpDir:pathlib.Path, stitchPath:pathlib.Path, outDir:pathlib
     outpath, outname = create_output_folder(outDir, pluginName)
     pl.outDir=outpath
     if not dryrun:
-        pl.run(gpus=None)
+        pl.run(gpus=gpus)
     return outpath
 
 def precompute_slide(inpDir:pathlib.Path, filePattern:str, imageType:str, outDir:pathlib.Path, VERSION:Optional[str] = None, dryrun:bool=True):
@@ -177,7 +188,7 @@ def precompute_slide(inpDir:pathlib.Path, filePattern:str, imageType:str, outDir
     outpath, outname = create_output_folder(outDir, pluginName)
     pl.outDir=outpath
     if not dryrun:
-        pl.run(gpus=None)
+        pl.run(gpus=gpus)
     return outpath
 
 def SplineDist(inpDir:pathlib.Path, filePattern:str, modelDir:pathlib.Path, outDir:pathlib.Path, VERSION:Optional[str] = None, dryrun:bool=True):
@@ -191,7 +202,7 @@ def SplineDist(inpDir:pathlib.Path, filePattern:str, modelDir:pathlib.Path, outD
     outpath, outname = create_output_folder(outDir, pluginName)
     pl.outDir=outpath
     if not dryrun:
-        pl.run(gpus=None)
+        pl.run(gpus=gpus)
     return outpath
 
 def ImagenetModelFeaturization(inpDir:pathlib.Path, model:str, resolution:str, outDir:pathlib.Path, VERSION:Optional[str] = None, dryrun:bool=True):
@@ -207,7 +218,7 @@ def ImagenetModelFeaturization(inpDir:pathlib.Path, model:str, resolution:str, o
     outpath, outname = create_output_folder(outDir, pluginName)
     pl.outDir=outpath
     if not dryrun:
-        pl.run(gpus=None)
+        pl.run(gpus=gpus)
     return outpath
 
 
@@ -224,24 +235,31 @@ def cellposeInference(inpDir:pathlib.Path, filePattern:str,outDir:pathlib.Path, 
     outpath, outname = create_output_folder(outDir, pluginName)
     pl.outDir=outpath
     if not dryrun:
-        pl.run(gpus=None)
+        pl.run(gpus=gpus)
     return outpath
 
-# def SMP_training_inference(inpDir:pathlib.Path, filePattern:str, model:pathlib.Path, outDir:pathlib.Path, VERSION:Optional[str] = None, dryrun:bool=True):
-#     url = 'https://raw.githubusercontent.com/nishaq503/polus-plugins/plugin/smp-training/segmentation/polus-smp-training-plugin/plugin.json'
-#     polus.plugins.submit_plugin(url, refresh=True)
-#     pl = plugins.DemoSMPTrainingInference
-#     pluginName = pl.name
-#     pl.inferenceMode = "active"
-#     pl.imagesInferenceDir = inpDir
-#     pl.inferencePattern = filePattern
-#     pl.inferenceMode=True
-#     pl.pretrainedModel = model
-#     outpath, outname = create_output_folder(outDir, pluginName)
-#     pl.outDir=outpath
-#     if not dryrun:
-#         pl.run(gpus=None)
-#     return outpath
+def polus_smp_training_inference(inpDir:pathlib.Path, filePattern:str, modelDir:pathlib.Path, outDir:pathlib.Path, VERSION:Optional[str] = None, dryrun:bool=True):
+    # url = 'https://raw.githubusercontent.com/nishaq503/polus-plugins/plugin/smp-training/segmentation/polus-smp-training-plugin/plugin.json'
+    url = pathlib.Path('/home/ec2-user/Anaconda3/envs/py39/lib/python3.9/site-packages/polus/manifests/labshare/DemoSmpTraining_Inference_M0m5p6.json')
+    polus.plugins.submit_plugin(url, refresh=True)
+    pl = plugins.DemoSmpTraining_Inference
+    pluginName = 'smp_training_inference'
+    pl.inferenceMode = "active"
+    pl.imagesInferenceDir = inpDir
+    pl.inferencePattern = filePattern
+    pl.pretrainedModel = modelDir
+    pl.batchSize='10'
+    pl.device = "gpu"
+    pl.lossName='MCCLoss'
+    pl.checkpointFrequency='10'
+    pl.maxEpochs='10'
+    pl.patience='10'
+    pl.minDelta='10'
+    outpath, outname = create_output_folder(outDir, pluginName)
+    pl.outputDir=outpath
+    if not dryrun:
+        pl.run(gpus=gpus)
+    return outpath
 
 
 def SMP_training_inference(inpDir:pathlib.Path, filePattern:str, modelDir:pathlib.Path, outDir:pathlib.Path, VERSION:Optional[str] = None, dryrun:bool=True):
@@ -273,7 +291,7 @@ def SMP_training_inference(inpDir:pathlib.Path, filePattern:str, modelDir:pathli
 
 def FtlLabel(inpDir:pathlib.Path, outDir:pathlib.Path, VERSION:Optional[str] = None, dryrun:bool=True):
     # url = 'https://raw.githubusercontent.com/nishaq503/polus-plugins/ftl/feat/binarization-threshold/transforms/images/polus-ftl-label-plugin/plugin.json'
-    url = Path('/home/ec2-user/anaconda3/envs/py39/lib/python3.9/site-packages/polus/manifests/labshare/FtlLabel_M0m3p11.json')
+    url = Path('/home/ec2-user/Anaconda3/envs/py39/lib/python3.9/site-packages/polus/manifests/labshare/FtlLabel_M0m3p11.json')
     polus.plugins.submit_plugin(url, refresh=True)
     pl = plugins.FtlLabel
     pluginName = pl.name
@@ -284,7 +302,7 @@ def FtlLabel(inpDir:pathlib.Path, outDir:pathlib.Path, VERSION:Optional[str] = N
     outpath, outname = create_output_folder(outDir, pluginName)
     pl.outDir=outpath
     if not dryrun:
-        pl.run(gpus=None)
+        pl.run(gpus=gpus)
     return outpath 
 
 # def Nyxus(inpDir:pathlib.Path, segDir:pathlib.Path, filePattern:str, csvFile:str, outDir:pathlib.Path, features:Optional[str] = "*ALL*", VERSION:Optional[str] = None, dryrun:bool=True):
@@ -327,11 +345,10 @@ def Nyxus_exe(inpDir:pathlib.Path, segDir:pathlib.Path, filePattern:str, outDir:
         os.system(command)
     return outDir
 
-def rename_files(inpDir:pathlib.Path):
-    for files in os.listdir(inpDir):
-        if files.endswith('c1.ome.tif'):
-            replace_name = files[:-9] + '2.ome.tif'
-            os.rename(pathlib.Path(inpDir, files), pathlib.Path(inpDir, replace_name))
+def rename_files(inpDir:pathlib.Path, dryrun:bool=True):
+    if not dryrun:  
+        for files in os.listdir(inpDir):
+            if files.endswith('c1.ome.tif'):
+                replace_name = files[:-9] + '2.ome.tif'
+                os.rename(pathlib.Path(inpDir, files), pathlib.Path(inpDir, replace_name))
     return inpDir
-
-

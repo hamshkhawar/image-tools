@@ -39,6 +39,7 @@ parser.add_argument('--platesNum', dest='platesNum', type=int,
                         help='Total number of 384-well plates', required=True)         
 parser.add_argument('--outDir', dest='outDir', type=str,
                         help='outDir used to collect outputs', required=True)   
+
 # # Parse the arguments
 args = parser.parse_args()
 data = str(args.data) 
@@ -59,6 +60,7 @@ outDir = args.outDir
 logger.info('outDir = {}'.format(outDir))
 
 
+
 def main(data:str,
         filePattern:str,
         groupBy:str,
@@ -66,17 +68,19 @@ def main(data:str,
         platesNum:int,
         outDir:Path,
         model:Optional[str]=None,
-        resolution:Optional[str]=None
+        resolution:Optional[str]=None,
          ) -> None:
+    
         starttime= time.time()
-
+      
         if platesNum > 1:
             plates = [str(i).zfill(2) for i in range(0, platesNum+1)]
         else:
-            plates = [str(i).zfill(2) for i in range(0, platesNum)]
+            plates = [''.join([s for s in filePattern][1:3])]
             
         for plate in plates:
-            filePattern = '{0}{1}_{2}'.format('p', plate, '_'.join((filePattern.split('_')[1:])))
+        
+            filePattern = '{0}{1}_{2}'.format('p', plate, '_'.join((filePattern.split('_')[1:])))         
             logger.info("Running Workflow for plate:{plate}, filePattern:{filePattern}")
             logger.info("Step1: Loading image data collection")
             inpDir = collections[data].standard.intensity.path
@@ -87,21 +91,22 @@ def main(data:str,
             corrDir = ApplyFlatfield(inpDir=inpDir, filePattern=filePattern,outDir=outDir,ffDir=outpath, dryrun=True)
             logger.info("Step3: Finished Running ApplyFlatField_Correction plugin")   
             logger.info("Step4: SMP_training_inference plugin is running ")
-            filePattern='p01_x{x+}_y{y+}_wx{t}_wy{p}_c1.ome.tif'
-            segDir = SMP_training_inference(inpDir=corrDir, filePattern=filePattern, modelDir=modelDir, outDir=outDir,dryrun=True)
+            corrDir = '/home/ec2-user/data/Apply_Flatfield_outputs'
+            segDir='/home/ec2-user/data/smp_training_inference_outputs'
+            filePattern= filePattern.replace("{c}", '1')
+            segDir = polus_smp_training_inference(inpDir=corrDir, filePattern=filePattern, modelDir=modelDir, outDir=outDir,dryrun=True)
             logger.info("Step4: Finished Running SMP_training_inference plugin")
             logger.info("Step5: FtlLabel plugin is running")
-            segDir = '/home/ec2-user/data/polus_smp_training_outputs'
             segDir = FtlLabel(inpDir=segDir, outDir=outDir, dryrun=False)
             logger.info("Step5: Finished Running FtlLabel plugin")
             logger.info("Step6: Rename of files for channel")
-            segDir = rename_files(inpDir=segDir)
+            segDir = rename_files(inpDir=segDir, dryrun=False)
             logger.info("Step6: Finish Renaming of files for channel")
             logger.info("Step7: Nyxus plugin is Running")
             filePattern='.*c2\.ome\.tif'
             outpath = Nyxus_exe(inpDir=corrDir, segDir=segDir, filePattern=filePattern, outDir=outDir, dryrun=False)
             logger.info("Step7: Finished Running Nyxus plugin")
-            analysis_worflow(inpDir=outpath, plate=plate, outDir=outDir)
+            analysis_worflow(inpDir=outpath, plate=plate, outDir=outDir, dryrun=False)
             endtime = (time.time() - starttime)/60
             logger.info(f'Time taken to finished Step1-2: {endtime}')
     

@@ -212,75 +212,76 @@ def heatmap_visualization(x:pd.DataFrame,
     fig.savefig(pathlib.Path(figDir, outname))
 
 
-def analysis_worflow(inpDir:pathlib.Path, plate:str, outDir:pathlib.Path):
-    figDir = pathlib.Path(outDir, 'Figures')
-    figDir.mkdir(parents=True, exist_ok=True)
-    logger.info(f"Creating a figure directory:{figDir}")
-    logger.info("Analysis workflow is running")
-    pattern = f'*p{plate}*ome.tif.csv'
-    logger.info(f'Step 1: loading CSVs with pattern: {pattern}')
-    df = loading_csv(inpDir, pattern)
-    logger.info("CSVs are loaded")
-    logger.info(f'Step 2: Extracting Metadata')
-    prf = metadata_extraction(df, plate)
-    logger.info(f'Step 2: Finished assigning Metadata')
-    logger.info(f'Step 3: Threshold estimation for cell size')
-    outlier_thr = threshold_std(prf, variableName='AREA_PIXELS_COUNT', value=1) 
-    logger.info(f'Step 3: Finished threshold estimation')
-    logger.info(f'Step 5: Plotting Figure 1: cellsize thresholding')
-    outliers_removed = [x for x in prf['AREA_PIXELS_COUNT'] if x > outlier_thr]   
-    outlier_p = float("{:.2f}".format(len(outliers_removed)/prf.shape[0] * 100))
-    plot_cellsize_threshold(prf, outlier_thr, outlier_p, plate, figDir)
-    logger.info(f'Step 5: Finished Plotting Figure 1: cellsize thresholding')
-    logger.info(f'Step 6: Data cleaning')
-    dfclean =prf.query('AREA_PIXELS_COUNT < @outlier_thr')
-    logger.info(f'Step 6: Finished Data cleaning')
-    logger.info(f'Step 7: Calculating Mean Well Intensity & Cell Count')
-    well_meanI = (dfclean
-           .groupby(by=['Metadata_Well'])['MEAN'].mean()
-           .reset_index()
-           .round(decimals=2)
-    )
-    mean_cell_count = (dfclean
-           .groupby(by=['Metadata_Well'])['MEAN'].count()
-           .reset_index()
-           .round(decimals=2)
-    )
-    logger.info(f'Step 7: Finished Calculating Mean Well Intensity & Cell Count')
-    logger.info(f'Step 8: Plotting Figure 2: Thesholding_otsu')
-    plotting_control_distribution(threshold_otsu, 
-                                  dfclean,
-                                  variableName='MEAN', 
-                                  value=512, 
-                                  plate=plate, 
-                                  figDir=figDir,
-                                  otsu=True)
-    logger.info(f'Step 8: Finished Plotting Figure 2: Thesholding_otsu')
-    logger.info(f'Step 9: Plotting Figure 3: Heatmap of Theshold Based Cell assignments')
-    merged = threshold_based_cell_assignment(threshold_otsu, 
-                                        dfclean, 
-                                        variableName='MEAN',
-                                        value=512, 
-                                        otsu=True)
-    heatmap_visualization(merged,
-                          variableName='percentage',
-                          title='Percent Positive Cells for Covid Expression', 
-                          plate=plate,
-                          figDir=figDir)
-    logger.info(f'Step 9: Finished Plotting Figure 3: Theshold Based Cell assignments')
-    logger.info(f'Step 10: Plotting Figure 4: Heatmap of Mean cell count')
-    heatmap_visualization(mean_cell_count,
-                          variableName='MEAN',
-                          title='Cell count per well',
-                          plate=plate, 
-                          figDir=figDir)
-    logger.info(f'Step 9: Finished Plotting Figure 4: Heatmap of Mean Cell Count')
-    logger.info(f'Step 10: Plotting Figure 5: Heatmap of Mean well intensity')
-    heatmap_visualization(well_meanI, 
-                          variableName='MEAN',
-                          title='Mean Well Covid Reporter Expression',
-                          plate=plate,
-                          figDir=figDir)
-    logger.info(f'Step 10: Finished Plotting Figure 5: Heatmap of Mean well intensity')
-    logger.info(f'Analyis pipeline is completed!!!')      
+def analysis_worflow(inpDir:pathlib.Path, plate:str, outDir:pathlib.Path, dryrun:bool=True):
+    if not dryrun:   
+        figDir = pathlib.Path(outDir, 'Figures')
+        figDir.mkdir(parents=True, exist_ok=True)
+        logger.info(f"Creating a figure directory:{figDir}")
+        logger.info("Analysis workflow is running")
+        pattern = f'*p{plate}*ome.tif.csv'
+        logger.info(f'Step 1: loading CSVs with pattern: {pattern}')
+        df = loading_csv(inpDir, pattern)
+        logger.info("CSVs are loaded")
+        logger.info(f'Step 2: Extracting Metadata')
+        prf = metadata_extraction(df, plate)
+        logger.info(f'Step 2: Finished assigning Metadata')
+        logger.info(f'Step 3: Threshold estimation for cell size')
+        outlier_thr = threshold_std(prf, variableName='AREA_PIXELS_COUNT', value=1) 
+        logger.info(f'Step 3: Finished threshold estimation')
+        logger.info(f'Step 5: Plotting Figure 1: cellsize thresholding')
+        outliers_removed = [x for x in prf['AREA_PIXELS_COUNT'] if x > outlier_thr]   
+        outlier_p = float("{:.2f}".format(len(outliers_removed)/prf.shape[0] * 100))
+        plot_cellsize_threshold(prf, outlier_thr, outlier_p, plate, figDir)
+        logger.info(f'Step 5: Finished Plotting Figure 1: cellsize thresholding')
+        logger.info(f'Step 6: Data cleaning')
+        dfclean =prf.query('AREA_PIXELS_COUNT < @outlier_thr')
+        logger.info(f'Step 6: Finished Data cleaning')
+        logger.info(f'Step 7: Calculating Mean Well Intensity & Cell Count')
+        well_meanI = (dfclean
+            .groupby(by=['Metadata_Well'])['MEAN'].mean()
+            .reset_index()
+            .round(decimals=2)
+        )
+        mean_cell_count = (dfclean
+            .groupby(by=['Metadata_Well'])['MEAN'].count()
+            .reset_index()
+            .round(decimals=2)
+        )
+        logger.info(f'Step 7: Finished Calculating Mean Well Intensity & Cell Count')
+        logger.info(f'Step 8: Plotting Figure 2: Thesholding_otsu')
+        plotting_control_distribution(threshold_otsu, 
+                                    dfclean,
+                                    variableName='MEAN', 
+                                    value=512, 
+                                    plate=plate, 
+                                    figDir=figDir,
+                                    otsu=True)
+        logger.info(f'Step 8: Finished Plotting Figure 2: Thesholding_otsu')
+        logger.info(f'Step 9: Plotting Figure 3: Heatmap of Theshold Based Cell assignments')
+        merged = threshold_based_cell_assignment(threshold_otsu, 
+                                            dfclean, 
+                                            variableName='MEAN',
+                                            value=512, 
+                                            otsu=True)
+        heatmap_visualization(merged,
+                            variableName='percentage',
+                            title='Percent Positive Cells for Covid Expression', 
+                            plate=plate,
+                            figDir=figDir)
+        logger.info(f'Step 9: Finished Plotting Figure 3: Theshold Based Cell assignments')
+        logger.info(f'Step 10: Plotting Figure 4: Heatmap of Mean cell count')
+        heatmap_visualization(mean_cell_count,
+                            variableName='MEAN',
+                            title='Cell count per well',
+                            plate=plate, 
+                            figDir=figDir)
+        logger.info(f'Step 9: Finished Plotting Figure 4: Heatmap of Mean Cell Count')
+        logger.info(f'Step 10: Plotting Figure 5: Heatmap of Mean well intensity')
+        heatmap_visualization(well_meanI, 
+                            variableName='MEAN',
+                            title='Mean Well Covid Reporter Expression',
+                            plate=plate,
+                            figDir=figDir)
+        logger.info(f'Step 10: Finished Plotting Figure 5: Heatmap of Mean well intensity')
+        logger.info(f'Analyis pipeline is completed!!!')      
     return
