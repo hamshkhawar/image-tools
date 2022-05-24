@@ -1,7 +1,6 @@
 import os
 from pathlib import Path
 import argparse, logging, os
-from pickle import FALSE
 import time
 from workflow import *
 from analysis import *

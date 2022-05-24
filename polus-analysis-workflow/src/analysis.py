@@ -1,12 +1,9 @@
 import os, glob, re, typing, pathlib, logging
 import pandas as pd
 from re import search
-import plotnine as gg
-from plotnine import *
 import seaborn as sns
 import matplotlib.pyplot as plt
 import numpy as np
-from sklearn.preprocessing import StandardScaler
 
 
 logging.basicConfig(
