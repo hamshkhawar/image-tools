@@ -1,11 +1,10 @@
-import os
+import os, re, time, argparse, logging
 from pathlib import Path
-import argparse, logging, os
-import time
 from workflow import *
 from analysis import *
 from typing import Optional
 from polus.data import collections
+
 
 
 #Import environment variables
@@ -89,26 +88,35 @@ def main(data:str,
             filePattern = '{0}{1}_{2}'.format('p', plate, '_'.join((filePattern.split('_')[1:])))         
             logger.info("Running Workflow for plate:{plate}, filePattern:{filePattern}")
             logger.info("Step1: Loading image data collection")
-            inpDir = collections[data].standard.intensity.path
+            inpDir = collections[data].standard.intensity
+            assert inpDir.exists(), f'Directory does not exist: {inpDir}'
             logger.info("Step2: FlatField Correction plugin is running")
             outpath  = Run_FlatField_Correction(inpDir, filePattern,groupBy, outDir, dryrun=False)
+            assert outpath.exists(), f'Directory does not exist: {outpath}'
             logger.info("Step2: Finished Running FlatField Estimation")
             logger.info("Step3: Apply_FlatField_Correction plugin is running")
             corrDir = ApplyFlatfield(inpDir=inpDir, filePattern=filePattern,outDir=outDir,ffDir=outpath, dryrun=False)
+            assert corrDir.exists(), f'Directory does not exist: {corrDir}'
             logger.info("Step3: Finished Running ApplyFlatField_Correction plugin") 
             logger.info("Step4: SMP_training_inference plugin is running")
             filePattern= filePattern.replace("{c}", '1')
             segDir = polus_smp_training_inference(inpDir=corrDir, filePattern=filePattern, modelDir=modelDir, outDir=outDir,dryrun=False)
+            assert segDir.exists(), f'Labelled images Directory does not exist: {segDir}'
             logger.info("Step4: Finished Running SMP_training_inference plugin")
             logger.info("Step5: FtlLabel plugin is running")
             segDir = FtlLabel(inpDir=segDir, outDir=outDir, dryrun=False)
+            assert segDir.exists(), f'Directory does not exist: {segDir}'
             logger.info("Step5: Finished Running FtlLabel plugin")
             logger.info("Step6: Rename of files for channel")
             segDir = rename_files(inpDir=segDir, dryrun=False)
+            assert segDir.exists(), f'Directory does not exist: {segDir}'
+            assert search('c2', [f for f in os.listdir(segDir)][0]), \
+                f'Directory doesnot contain any c2 filenames: {segDir}'
             logger.info("Step6: Finish Renaming of files for channel")
             logger.info("Step7: Nyxus plugin is Running") 
             filePattern='.*c2\.ome\.tif'
             outpath = Nyxus_exe(inpDir=corrDir, segDir=segDir, filePattern=filePattern, outDir=outDir, dryrun=False)
+            assert outpath.exists(), f'Directory does not exist: {outpath}'
             logger.info("Step7: Finished Running Nyxus plugin")
             logger.info("Step8: Analysis Workflow is Running")
             analysis_worflow(inpDir=outpath, plate=plate, outDir=outDir, dryrun=False)
