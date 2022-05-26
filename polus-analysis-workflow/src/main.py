@@ -13,10 +13,15 @@ POLUS_LOG = getattr(logging,os.environ.get('POLUS_LOG','INFO'))
 POLUS_EXT = os.environ.get('POLUS_EXT','.ome.tif')
 
 # Initialize the logger
-logging.basicConfig(format='%(asctime)s - %(name)-8s - %(levelname)-8s - %(message)s',
-                    datefmt='%d-%b-%y %H:%M:%S')
+for handler in logging.root.handlers[:]:
+    logging.root.removeHandler(handler)
+logging.basicConfig(level=logging.INFO,format='%(asctime)s - %(name)-8s - %(levelname)-8s - %(message)s',
+                    datefmt='%d-%b-%y %H:%M:%S',
+                    filename='log.log', filemode='w')
 logger = logging.getLogger("main")
 logger.setLevel(POLUS_LOG)
+
+
 
 # ''' Argument parsing '''
 logger.info("Parsing arguments...")
@@ -70,6 +75,7 @@ def main(data:str,
         model:Optional[str]=None,
         resolution:Optional[str]=None,
          ) -> None:
+        logging.basicConfig(filename='file.log', level=logging.INFO)
     
         starttime= time.time()
       
@@ -85,16 +91,14 @@ def main(data:str,
             logger.info("Step1: Loading image data collection")
             inpDir = collections[data].standard.intensity.path
             logger.info("Step2: FlatField Correction plugin is running")
-            outpath  = Run_FlatField_Correction(inpDir, filePattern,groupBy, outDir, dryrun=True)
+            outpath  = Run_FlatField_Correction(inpDir, filePattern,groupBy, outDir, dryrun=False)
             logger.info("Step2: Finished Running FlatField Estimation")
             logger.info("Step3: Apply_FlatField_Correction plugin is running")
-            corrDir = ApplyFlatfield(inpDir=inpDir, filePattern=filePattern,outDir=outDir,ffDir=outpath, dryrun=True)
-            logger.info("Step3: Finished Running ApplyFlatField_Correction plugin")   
-            logger.info("Step4: SMP_training_inference plugin is running ")
-            corrDir = '/home/ec2-user/data/Apply_Flatfield_outputs'
-            segDir='/home/ec2-user/data/smp_training_inference_outputs'
+            corrDir = ApplyFlatfield(inpDir=inpDir, filePattern=filePattern,outDir=outDir,ffDir=outpath, dryrun=False)
+            logger.info("Step3: Finished Running ApplyFlatField_Correction plugin") 
+            logger.info("Step4: SMP_training_inference plugin is running")
             filePattern= filePattern.replace("{c}", '1')
-            segDir = polus_smp_training_inference(inpDir=corrDir, filePattern=filePattern, modelDir=modelDir, outDir=outDir,dryrun=True)
+            segDir = polus_smp_training_inference(inpDir=corrDir, filePattern=filePattern, modelDir=modelDir, outDir=outDir,dryrun=False)
             logger.info("Step4: Finished Running SMP_training_inference plugin")
             logger.info("Step5: FtlLabel plugin is running")
             segDir = FtlLabel(inpDir=segDir, outDir=outDir, dryrun=False)
@@ -102,13 +106,15 @@ def main(data:str,
             logger.info("Step6: Rename of files for channel")
             segDir = rename_files(inpDir=segDir, dryrun=False)
             logger.info("Step6: Finish Renaming of files for channel")
-            logger.info("Step7: Nyxus plugin is Running")
+            logger.info("Step7: Nyxus plugin is Running") 
             filePattern='.*c2\.ome\.tif'
             outpath = Nyxus_exe(inpDir=corrDir, segDir=segDir, filePattern=filePattern, outDir=outDir, dryrun=False)
             logger.info("Step7: Finished Running Nyxus plugin")
+            logger.info("Step8: Analysis Workflow is Running")
             analysis_worflow(inpDir=outpath, plate=plate, outDir=outDir, dryrun=False)
+            logger.info("Step8: Analysis Workflow is Completed")
             endtime = (time.time() - starttime)/60
-            logger.info(f'Time taken to finished Step1-2: {endtime}')
+            logger.info(f'Total time of imaging pipeline is {endtime} minutes')
     
 if __name__=="__main__":
     main(data=data,

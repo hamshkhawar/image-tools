@@ -248,7 +248,7 @@ def polus_smp_training_inference(inpDir:pathlib.Path, filePattern:str, modelDir:
     pl.imagesInferenceDir = inpDir
     pl.inferencePattern = filePattern
     pl.pretrainedModel = modelDir
-    pl.batchSize='10'
+    pl.batchSize=10
     pl.device = "gpu"
     pl.lossName='MCCLoss'
     pl.checkpointFrequency='10'
@@ -326,7 +326,8 @@ def Nyxus_exe(inpDir:pathlib.Path, segDir:pathlib.Path, filePattern:str, outDir:
     pluginName='nyxus'
     outDir, outname=create_output_folder(outDir, pluginName)
     filePattern=filePattern
-    features="*all*"
+    # features="*all*"
+    features="*ALL_INTENSITY*,*ALL_MORPHOLOGY*"
     csvFile="separatecsv"
     ARGS = {
         'intDir': inpDir,
