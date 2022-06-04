@@ -305,7 +305,6 @@ def FtlLabel(inpDir:pathlib.Path, outDir:pathlib.Path, VERSION:Optional[str] = N
         pl.run(gpus=gpus)
     return outpath 
 
-# def Nyxus(inpDir:pathlib.Path, segDir:pathlib.Path, filePattern:str, outDir:pathlib.Path, features:Optional[str] = "*ALL_INTENSITY*", dryrun:bool=True):
 def Nyxus(inpDir:pathlib.Path, segDir:pathlib.Path, filePattern:str, outDir:pathlib.Path,dryrun:bool=True):
     url = pathlib.Path('/home/ec2-user/Anaconda3/envs/py39/lib/python3.9/site-packages/polus/manifests/polusai/nyxus.json')
     # url = 'https://raw.githubusercontent.com/friskluft/nyxus/main/plugin.json'
@@ -314,9 +313,10 @@ def Nyxus(inpDir:pathlib.Path, segDir:pathlib.Path, filePattern:str, outDir:path
     pluginName = pl.name
     pl.intDir = inpDir
     pl.segDir = segDir
-    pl.filePattern = ".*"
+    pl.filePattern = filePattern
     pl.csvFile="separatecsv"
-    pl.features = "*ALL_INTENSITY*,AREA_PIXELS_COUNT"
+    # pl.features = "*ALL_INTENSITY*,AREA_PIXELS_COUNT"
+    pl.features = "INTEGRATED_INTENSITY,MEAN,AREA_PIXELS_COUNT"
     pl.pixelDistance=5
     pl.pixelsPerCentimeter=8361.2
     outpath, outname = create_output_folder(outDir, pluginName)
@@ -333,6 +333,7 @@ def Nyxus_exe(inpDir:pathlib.Path, segDir:pathlib.Path, filePattern:str, outDir:
     # features="*all*"
     #features="*ALL_INTENSITY*,*ALL_MORPHOLOGY*"
     features="*ALL_INTENSITY*,AREA_PIXELS_COUNT"
+    # features="INTEGRATED_INTENSITY,MEAN,AREA_PIXELS_COUNT"
     csvFile="separatecsv"
     ARGS = {
         'intDir': inpDir,

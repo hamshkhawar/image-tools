@@ -132,6 +132,8 @@ def main(data:str,
             ntime= time.time()
             logger.info("Step7: Nyxus plugin is Running") 
             filePattern='.*c2\.ome\.tif'
+            # corrDir = '/home/ec2-user/data/Apply_Flatfield_outputs'
+            # segDir='/home/ec2-user/data/FTL_Label_outputs'
             # outpath = Nyxus(inpDir=corrDir, segDir=segDir, filePattern=filePattern, outDir=outDir, dryrun=False)
             outpath = Nyxus_exe(inpDir=corrDir, segDir=segDir, filePattern=filePattern, outDir=outDir, dryrun=False)
             assert outpath.exists(), f'Directory does not exist: {outpath}'
