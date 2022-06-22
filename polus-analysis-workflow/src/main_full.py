@@ -8,16 +8,19 @@ from polus.data import collections
 
 
 
-
 #Import environment variables
 POLUS_LOG = getattr(logging,os.environ.get('POLUS_LOG','INFO'))
 POLUS_EXT = os.environ.get('POLUS_EXT','.ome.tif')
 
 # Initialize the logger
-logging.basicConfig(format='%(asctime)s - %(name)-8s - %(levelname)-8s - %(message)s',
-                    datefmt='%d-%b-%y %H:%M:%S')
+for handler in logging.root.handlers[:]:
+    logging.root.removeHandler(handler)
+logging.basicConfig(level=logging.INFO,format='%(asctime)s - %(name)-8s - %(levelname)-8s - %(message)s',
+                    datefmt='%d-%b-%y %H:%M:%S',
+                    filename='log.log', filemode='w')
 logger = logging.getLogger("main")
 logger.setLevel(POLUS_LOG)
+
 
 # ''' Argument parsing '''
 logger.info("Parsing arguments...")

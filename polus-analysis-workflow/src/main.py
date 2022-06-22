@@ -65,6 +65,9 @@ logger.info('outDir = {}'.format(outDir))
 
 
 
+
+
+
 def main(data:str,
         filePattern:str,
         groupBy:str,
@@ -85,11 +88,11 @@ def main(data:str,
             
         for plate in plates:
         
-            filePattern = '{0}{1}_{2}'.format('p', plate, '_'.join((filePattern.split('_')[1:])))         
+            filePattern = '{0}{1}_{2}'.format('p', plate, '_'.join((filePattern.split('_')[1:])))     
             logger.info("Running Workflow for plate:{plate}, filePattern:{filePattern}")
             logger.info("Step1: Loading image data collection")
             inpDir = collections[data].standard.intensity.path
-            assert inpDir.exists(), f'Directory does not exist: {inpDir}'
+            # assert inpDir.exists(), f'Directory does not exist: {inpDir}'
             fltime= time.time()
             logger.info("Step2: FlatField Correction plugin is running")
             outpath  = Run_FlatField_Correction(inpDir, filePattern,groupBy, outDir, dryrun=False)
@@ -100,7 +103,7 @@ def main(data:str,
             logger.info("Step2: Finished Running FlatField Estimation")
             aptime= time.time()
             logger.info("Step3: Apply_FlatField_Correction plugin is running")
-            corrDir = ApplyFlatfield(inpDir=inpDir, filePattern=filePattern,outDir=outDir,ffDir=outpath, dryrun=False)
+            corrDir = ApplyFlatfield(inpDir=inpDir, filePattern=filePattern, plate=plate, outDir=outDir,ffDir=outpath, dryrun=False)  
             applytime = (time.time() - aptime)/60
             logger.info(f"Apply_FlatField_Correction: {applytime}")
             assert corrDir.exists(), f'Directory does not exist: {corrDir}'

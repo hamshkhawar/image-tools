@@ -123,6 +123,8 @@ def plotting_control_distribution(func, x:pd.DataFrame,variableName:str, value:i
     controls = x.query('Metadata_Perturbation_type in @ controlname')
     if otsu:  
         thr = float("{:.2f}".format(func(controls, variableName, value)))
+        
+    fig = plt.figure()
 
     for cont in controlname:
         seltmp = x.loc[x['Metadata_Perturbation_type'] == cont]
@@ -138,7 +140,7 @@ def plotting_control_distribution(func, x:pd.DataFrame,variableName:str, value:i
     plt.ylabel('Density')
     plt.xlim([0, 5000])
     plt.show()
-    plt.savefig(pathlib.Path(figDir, f'Distribution_of_single_cell_MEAN_p{plate}'),dpi=300, bbox_inches='tight')
+    fig.savefig(pathlib.Path(figDir, f'Distribution_of_single_cell_MEAN_p{plate}'),dpi=300, bbox_inches='tight')
 
     return 
 
@@ -226,15 +228,15 @@ def analysis_worflow(inpDir:pathlib.Path, plate:str, outDir:pathlib.Path, dryrun
         prf = metadata_extraction(df, plate)
         logger.info(f'Step 2: Finished assigning Metadata')
         logger.info(f'Step 3: Threshold estimation for cell size')
-        outlier_thr = threshold_std(prf, variableName='AREA_PIXELS_COUNT', value=1) 
+        outlier_thr = threshold_std(prf, variableName='AREA_PIXELS_COUNT', value=4) 
         logger.info(f'Step 3: Finished threshold estimation')
         logger.info(f'Step 5: Plotting Figure 1: cellsize thresholding')
-        outliers_removed = [x for x in prf['AREA_PIXELS_COUNT'] if x > outlier_thr]   
+        outliers_removed = [x for x in prf['AREA_PIXELS_COUNT'] if x < 20 and x < outlier_thr]    
         outlier_p = float("{:.2f}".format(len(outliers_removed)/prf.shape[0] * 100))
         plot_cellsize_threshold(prf, outlier_thr, outlier_p, plate, figDir)
         logger.info(f'Step 5: Finished Plotting Figure 1: cellsize thresholding')
         logger.info(f'Step 6: Data cleaning')
-        dfclean =prf.query('AREA_PIXELS_COUNT < @outlier_thr')
+        dfclean =prf.query('AREA_PIXELS_COUNT > 20 and AREA_PIXELS_COUNT < @outlier_thr')
         logger.info(f'Step 6: Finished Data cleaning')
         logger.info(f'Step 7: Calculating Mean Well Intensity & Cell Count')
         well_meanI = (dfclean
@@ -265,7 +267,7 @@ def analysis_worflow(inpDir:pathlib.Path, plate:str, outDir:pathlib.Path, dryrun
                                             otsu=True)
         heatmap_visualization(merged,
                             variableName='percentage',
-                            title='Percent Positive Cells for Covid Expression', 
+                            title='The Proportion of Positive Cells for Covid Expression[Nyxus]', 
                             plate=plate,
                             figDir=figDir)
         logger.info(f'Step 9: Finished Plotting Figure 3: Theshold Based Cell assignments')

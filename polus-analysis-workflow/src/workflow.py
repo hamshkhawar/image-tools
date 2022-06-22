@@ -7,6 +7,19 @@ from typing import Optional, Dict
 import pathlib, logging
 import subprocess
 import torch
+import time
+
+
+def timer():
+    def wrapper(f):
+        def wrapped_f(*args, **kwargs):
+            tic = time.perf_counter()  # more precise than '.clock'
+            f(*args, **kwargs)
+            toc = time.perf_counter()
+            method_name = f.__name__
+            logger.info('{}: {:.2f}sec'.format(method_name, toc - tic))
+        return wrapped_f
+    return wrapper
 
 
 logging.basicConfig(
@@ -26,12 +39,26 @@ else:
 logger.info(f'device:{device}, gpus:{gpus}')
 
 
+
+def timer():
+    def wrapper(f):
+        def wrapped_f(*args, **kwargs):
+            tic = time.perf_counter()  # more precise than '.clock'
+            f(*args, **kwargs)
+            toc = time.perf_counter()
+            method_name = f.__name__
+            logger.info('{}: {:.2f}sec'.format(method_name, toc - tic))
+        return wrapped_f
+    return wrapper
+
+
 def create_output_folder(outDir, pluginName) -> pathlib.Path:
-    if 'plugin' in pluginName:
-        outname = '_'.join(pluginName.split('-')[:-1]) 
+    if ' ' in pluginName:   
+        outname = '_'.join(pluginName.split()) 
         outname = f'{outname}_outputs'
     else:
         outname = f'{pluginName}_outputs'
+   
     outpath = Path(outDir, outname)
     if not outpath.exists():
         os.makedirs(Path(outpath))
@@ -107,8 +134,10 @@ def Run_FlatField_Correction(inpDir:pathlib.Path,
     newpath = Path(outpath, 'images')
     return newpath
 
+
 def ApplyFlatfield(inpDir:pathlib.Path,
                             filePattern:str,
+                            plate:str,
                             outDir:pathlib.Path,
                             ffDir:Optional[Path]=None,
                             dryrun:bool=True) -> None:
@@ -120,8 +149,8 @@ def ApplyFlatfield(inpDir:pathlib.Path,
     pl.imgDir = inpDir
     pl.imgPattern = filePattern
     pl.ffDir= ffDir
-    pl.brightPattern = 'p01_x(01-24)_y(01-16)_wx(0-2)_wy(0-2)_c{c}_flatfield.ome.tif'
-    pl.darkPattern = 'p01_x(01-24)_y(01-16)_wx(0-2)_wy(0-2)_c{c}_darkfield.ome.tif'
+    pl.brightPattern='p'+ plate + '_x(01-24)_y(01-16)_wx(0-2)_wy(0-2)_c{c}_flatfield.ome.tif'
+    pl.darkPattern='p'+ plate + '_x(01-24)_y(01-16)_wx(0-2)_wy(0-2)_c{c}_darkfield.ome.tif'
     pl.photoPattern = ''
     outpath, outname = create_output_folder(outDir, pluginName)
     pl.outDir=outpath
@@ -134,10 +163,9 @@ def Run_Montage(inpDir:pathlib.Path,
                 outDir:pathlib.Path,
                 dryrun:bool=True
                 ) -> None:
-    # url='https://raw.githubusercontent.com/Nicholas-Schaub/polus-plugins/fix/montage/transforms/images/polus-montage-plugin/plugin.json'
-    url=Path('/home/ec2-user/data/plugin-manifest/montage.json')
+    url='https://raw.githubusercontent.com/Nicholas-Schaub/polus-plugins/fix/montage/transforms/images/polus-montage-plugin/plugin.json'
     polus.plugins.submit_plugin(url, refresh=True)
-    pl = plugins.Montage2
+    pl = plugins.Montage
     pluginName = pl.name
     pl.inpDir=inpDir
     pl.filePattern=filePattern
@@ -145,19 +173,21 @@ def Run_Montage(inpDir:pathlib.Path,
     pl.imageSpacing=1
     pl.gridSpacing=20
     pl.flipAxis='p'
-    outpath, outname = create_output_folder(outDir, pluginName)
+    outpath, _ = create_output_folder(outDir, pluginName)
     pl.outDir=outpath
     if not dryrun:
         pl.run(gpus=gpus)
     return outpath
 
 def Recycle_Vector(inpDir:pathlib.Path, stitchDir:pathlib.Path, filePattern:str, outDir:pathlib.Path, VERSION:Optional[str] = None, dryrun:bool=True):
+    url = 'https://raw.githubusercontent.com/PolusAI/polus-plugins/master/transforms/polus-recycle-vector-plugin/plugin.json'
+    polus.plugins.submit_plugin(url, refresh=True)
     pl = plugins.RecycleStitchingVectorPlugin
     pluginName = pl.name
     pl.filepattern=filePattern
     pl.stitchDir=stitchDir
     pl.collectionDir=inpDir
-    outpath, outname = create_output_folder(outDir, pluginName)
+    outpath, _ = create_output_folder(outDir, pluginName)
     pl.outDir=outpath
     if not dryrun:
         pl.run(gpus=gpus)
@@ -177,11 +207,14 @@ def Image_Assembler(inpDir:pathlib.Path, stitchPath:pathlib.Path, outDir:pathlib
         pl.run(gpus=gpus)
     return outpath
 
-def precompute_slide(inpDir:pathlib.Path, filePattern:str, imageType:str, outDir:pathlib.Path, VERSION:Optional[str] = None, dryrun:bool=True):
+def precompute_slide(inpDir:pathlib.Path, plate:str, pyramidType: str, imageType:str, outDir:pathlib.Path, VERSION:Optional[str] = None, dryrun:bool=True):
+    # url='https://raw.githubusercontent.com/PolusAI/polus-plugins/master/visualization/polus-precompute-slide-plugin/plugin.json'
+    filePattern= 'p'+plate+'_x(01-24)_y(01-16)_wx(0-2)_wy(0-2)_c{c}.ome.tif'
+    # polus.plugins.submit_plugin(url, refresh=True)
     pl = plugins.PolusPrecomputeSlidePlugin
     pluginName = pl.name
     pl.inpDir = inpDir
-    pl.pyramidType='Neuroglancer'
+    pl.pyramidType=pyramidType
     pl.filePattern=filePattern
     pl.imageType=imageType
     # Output paths
