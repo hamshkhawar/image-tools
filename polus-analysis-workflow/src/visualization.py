@@ -127,7 +127,7 @@ def main(data:str,
             logger.info("Step6: Precompute_Slide plugin is Running ")
             outpath = '/home/ec2-user/data/Image_Assembler_outputs'
             precomtime= time.time()
-            outpath = precompute_slide(inpDir=outpath, plate=plate, pyramidType='Neuroglancer', imageType='image', outDir=outDir, dryrun=False)
+            outpath = precompute_slide(inpDir=outpath, plate=plate, pyramidType='DeepZoom', imageType='image', outDir=outDir, dryrun=False)
             # logger.info("Step6: Finished Running Precompute_Slide plugin")
             # logger.info(f"Finished Running Precompute_Slide plugin: {(time.time() - precomtime)/60}")
             endtime = (time.time() - starttime)/60

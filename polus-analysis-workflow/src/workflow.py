@@ -1,13 +1,11 @@
+import os, torch, re, time, subprocess, pathlib, logging
 import polus.plugins
 from polus.plugins import plugins
 from polus.data import collections
 from pathlib import Path
-import os
 from typing import Optional, Dict
-import pathlib, logging
-import subprocess
-import torch
-import time
+import numpy as np
+
 
 
 def timer():
@@ -359,7 +357,7 @@ def Nyxus(inpDir:pathlib.Path, segDir:pathlib.Path, filePattern:str, outDir:path
     return outpath
 
 
-def Nyxus_exe(inpDir:pathlib.Path, segDir:pathlib.Path, filePattern:str, outDir:pathlib.Path, dryrun:bool=True):
+def Nyxus_exe(inpDir:pathlib.Path, segDir:pathlib.Path, filePattern:str, outDir:pathlib.Path, dryrun:bool=True) -> pathlib.Path:
     pluginName='nyxus'
     outDir, outname=create_output_folder(outDir, pluginName)
     filePattern=filePattern
@@ -392,3 +390,51 @@ def rename_files(inpDir:pathlib.Path, dryrun:bool=True):
                 replace_name = files[:-9] + '2.ome.tif'
                 os.rename(pathlib.Path(inpDir, files), pathlib.Path(inpDir, replace_name))
     return inpDir
+
+
+
+def separating_stichingvector_channels(inpDir:pathlib.Path,
+                                      outDir:pathlib.Path):
+    
+        
+    """Create separate stiching vectors txt file for each channel
+    Args:
+        inpDir (Path): Path to input stiching vector.
+        outDir (Path): Path to output folder.
+    Returns:
+        paths for directory containing separate stiching vectors files for each channel
+    """  
+
+    outname = 'separating_stichingvector_channels'
+    outpath = Path(outDir, outname)
+    if not outpath.exists():
+        os.makedirs(Path(outpath))
+        f'{outname} directory is created'
+    else:
+        f'{outname} directory already exists'
+        
+    vectors = [
+            v
+            for v in Path(inpDir).iterdir()
+            if pathlib.Path(v).name.endswith(".txt")
+        ]
+
+        
+    for v in vectors:     
+        with open(v) as f:
+            pattern = re.compile(r'[^.+]c([\d])')
+            lines = f.readlines()
+
+            channel_list = [re.findall(pattern, line) for line in lines]
+
+            unique_channels = list(np.unique([list(t) for t in zip(*channel_list)]))
+
+            for ch in unique_channels:
+
+                parsed_channels = [line for line in lines if 'c'+ ch in line]
+
+                with open(f'{outpath}/img-global-positions-{ch}.txt', 'w') as f:
+                    for line in parsed_channels:  
+                        f.write("%s" % line)
+
+    return outpath
