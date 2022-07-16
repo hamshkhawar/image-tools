@@ -178,13 +178,17 @@ def Run_Montage(inpDir:pathlib.Path,
     return outpath
 
 def Recycle_Vector(inpDir:pathlib.Path, stitchDir:pathlib.Path, filePattern:str, outDir:pathlib.Path, VERSION:Optional[str] = None, dryrun:bool=True):
-    url = 'https://raw.githubusercontent.com/PolusAI/polus-plugins/master/transforms/polus-recycle-vector-plugin/plugin.json'
+    url = Path('/home/ec2-user/Anaconda3/envs/py39/lib/python3.9/site-packages/polus/manifests/labshare/Recycle.json')
+    # url = 'https://raw.githubusercontent.com/PolusAI/polus-plugins/master/transforms/polus-recycle-vector-plugin/plugin.json'
     polus.plugins.submit_plugin(url, refresh=True)
-    pl = plugins.RecycleStitchingVectorPlugin
+    pl = plugins.RecycleStitchingVectorPlugin1
     pluginName = pl.name
-    pl.filepattern=filePattern
+    # pl.filepattern=filePattern
     pl.stitchDir=stitchDir
     pl.collectionDir=inpDir
+    pl.stitchRegex=filePattern
+    pl.collectionRegex=filePattern
+    pl.groupBy='xytp'
     outpath, _ = create_output_folder(outDir, pluginName)
     pl.outDir=outpath
     if not dryrun:
@@ -206,16 +210,17 @@ def Image_Assembler(inpDir:pathlib.Path, stitchPath:pathlib.Path, outDir:pathlib
     return outpath
 
 def precompute_slide(inpDir:pathlib.Path, plate:str, pyramidType: str, imageType:str, outDir:pathlib.Path, VERSION:Optional[str] = None, dryrun:bool=True):
-    # url='https://raw.githubusercontent.com/PolusAI/polus-plugins/master/visualization/polus-precompute-slide-plugin/plugin.json'
+    #url='https://raw.githubusercontent.com/PolusAI/polus-plugins/master/visualization/polus-precompute-slide-plugin/plugin.json'
+    # url = Path('/home/ec2-user/Anaconda3/envs/py39/lib/python3.9/site-packages/polus/manifests/labshare/PolusPrecomputeSlidePlugin_M1m4p3.json')
     filePattern= 'p'+plate+'_x(01-24)_y(01-16)_wx(0-2)_wy(0-2)_c{c}.ome.tif'
     # polus.plugins.submit_plugin(url, refresh=True)
-    pl = plugins.PolusPrecomputeSlidePlugin
+    pl = plugins.PolusPrecomputeSlidePlugin1
     pluginName = pl.name
     pl.inpDir = inpDir
     pl.pyramidType=pyramidType
     pl.filePattern=filePattern
     pl.imageType=imageType
-    # Output paths
+    # Output pathsls
     outpath, outname = create_output_folder(outDir, pluginName)
     pl.outDir=outpath
     if not dryrun:
@@ -390,6 +395,37 @@ def rename_files(inpDir:pathlib.Path, dryrun:bool=True):
                 replace_name = files[:-9] + '2.ome.tif'
                 os.rename(pathlib.Path(inpDir, files), pathlib.Path(inpDir, replace_name))
     return inpDir
+
+
+def stichingvector(inpDir:pathlib.Path,
+                    outDir:pathlib.Path):
+    
+    """Create separate stiching vectors txt file for each channel
+    Args:
+        inpDir (Path): Path to input stiching vector.
+        outDir (Path): Path to output folder.
+    Returns:
+        paths for directory containing separate stiching vectors files for each channel
+    """
+    
+    outname = 'stichingvector'
+    outpath = Path(outDir, outname)
+    if not outpath.exists():
+        os.makedirs(Path(outpath))
+        f'{outname} directory is created'
+    else:
+        f'{outname} directory already exists' 
+    
+    with open(f'{inpDir}/img-global-positions-1.txt','r') as file:
+        filedata = file.read()
+        file_ch1 = filedata.replace('c2', 'c1')
+        file_ch2 = filedata.replace('c1', 'c2')
+    with open(f'{outpath}/img-global-positions-1.txt','w') as file:
+        file.write(file_ch1)   
+    with open(f'{outpath}/img-global-positions-2.txt','w') as file:
+        file.write(file_ch2)
+        
+    return outpath
 
 
 
