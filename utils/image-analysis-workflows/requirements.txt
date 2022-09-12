@@ -16,3 +16,4 @@ git+https://github.com/PolusAI/segmentation_models.pytorch.git
 pandas==1.4.2
 matplotlib==3.5.3
 seaborn==0.11.2
+blosc==1.10.6
