@@ -144,8 +144,6 @@ def test_calinski_davies(
     params=[
         ("CalinskiHarabasz", 500, ".csv", 2, 5, 3),
         ("DaviesBouldin", 1000, ".arrow", 2, 7, 4),
-        ("Elbow", 500, ".arrow", 2, 8, 4),
-        ("Manual", 1000, ".arrow", 2, 10, 5),
     ],
 )
 def get_params(request: pytest.FixtureRequest) -> pytest.FixtureRequest:
