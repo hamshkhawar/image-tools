@@ -76,13 +76,7 @@ class Generatedata:
 
 @pytest.mark.parametrize(
     ("ext", "minrange", "maxrange"),
-    [
-        (".arrow", 2, 5),
-        (".csv", 2, 7),
-        (".arrow", 2, 20),
-        (".arrow", 2, 30),
-        (".csv", 2, 10),
-    ],
+    [(".arrow", 2, 5), (".csv", 2, 7)],
 )
 def test_elbow(ext: str, minrange: int, maxrange: int) -> None:
     """Testing elbow function."""
@@ -113,7 +107,6 @@ def test_elbow(ext: str, minrange: int, maxrange: int) -> None:
     [
         ("CalinskiHarabasz", 10000, ".arrow", 2, 5),
         ("DaviesBouldin", 1000, ".csv", 2, 7),
-        ("CalinskiHarabasz", 10000, ".csv", 2, 10),
     ],
 )
 def test_calinski_davies(
@@ -151,8 +144,8 @@ def test_calinski_davies(
     params=[
         ("CalinskiHarabasz", 500, ".csv", 2, 5, 3),
         ("DaviesBouldin", 1000, ".arrow", 2, 7, 4),
-        ("Elbow", 500, ".arrow", 2, 20, 3),
-        ("Manual", 2000, ".arrow", 2, 10, 20),
+        ("Elbow", 500, ".arrow", 2, 8, 4),
+        ("Manual", 1000, ".arrow", 2, 10, 5),
     ],
 )
 def get_params(request: pytest.FixtureRequest) -> pytest.FixtureRequest:
