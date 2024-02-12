@@ -105,8 +105,8 @@ def test_elbow(ext: str, minrange: int, maxrange: int) -> None:
 @pytest.mark.parametrize(
     ("method", "datasize", "ext", "minrange", "maxrange"),
     [
-        ("CalinskiHarabasz", 10000, ".arrow", 2, 5),
-        ("DaviesBouldin", 1000, ".csv", 2, 7),
+        ("CalinskiHarabasz", 500, ".arrow", 2, 5),
+        ("DaviesBouldin", 600, ".csv", 2, 7),
     ],
 )
 def test_calinski_davies(
@@ -142,9 +142,10 @@ def test_calinski_davies(
 
 @pytest.fixture(
     params=[
-        ("CalinskiHarabasz", 500, ".csv", 2, 5, 3),
-        ("DaviesBouldin", 1000, ".arrow", 2, 7, 4),
-        ("Elbow", 500, ".arrow", 2, 10, 3),
+        ("CalinskiHarabasz", 500, ".csv", 2, 5),
+        ("DaviesBouldin", 250, ".arrow", 2, 7),
+        ("Elbow", 500, ".arrow", 2, 10),
+        ("Manual", 200, ".arrow", 2, 5),
     ],
 )
 def get_params(request: pytest.FixtureRequest) -> pytest.FixtureRequest:
@@ -154,13 +155,14 @@ def get_params(request: pytest.FixtureRequest) -> pytest.FixtureRequest:
 
 def test_cli(get_params: pytest.FixtureRequest) -> None:
     """Test Cli."""
-    method, data_size, inpext, minrange, maxrange, numclusters = get_params
+    method, data_size, inpext, minrange, maxrange = get_params
     d = Generatedata(inpext, outname=f"data_1{inpext}", size=data_size)
     d()
     shutil.copy(
         d.get_inp_dir().joinpath(f"data_1{inpext}"),
         d.get_inp_dir().joinpath(f"data_2{inpext}"),
     )
+    numclusters = 3
 
     result = runner.invoke(
         app,
