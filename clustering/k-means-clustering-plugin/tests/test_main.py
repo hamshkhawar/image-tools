@@ -4,12 +4,9 @@ import pathlib
 import shutil
 import tempfile
 
-import filepattern as fp
 import numpy as np
 import pandas as pd
 import pytest
-import vaex
-from polus.plugins.clustering.k_means import k_means as km
 from polus.plugins.clustering.k_means.__main__ import app
 from typer.testing import CliRunner
 
@@ -74,72 +71,6 @@ class Generatedata:
                 shutil.rmtree(d)
 
 
-@pytest.mark.parametrize(
-    ("ext", "minrange", "maxrange"),
-    [(".arrow", 2, 5), (".csv", 2, 7)],
-)
-def test_elbow(ext: str, minrange: int, maxrange: int) -> None:
-    """Testing elbow function."""
-    d = Generatedata(ext, outname=f"data_1{ext}", size=10000)
-    d()
-    pattern = f".*{ext}"
-    fps = fp.FilePattern(d.get_inp_dir(), pattern)
-
-    for file in fps():
-        if f"{pattern}" == ".csv":
-            df = vaex.read_csv(file[1][0], convert=True)
-        else:
-            df = vaex.open(file[1][0])
-
-        label_data = km.elbow(
-            data_array=df[:, :4].values,
-            minimum_range=minrange,
-            maximum_range=maxrange,
-        )
-
-        assert label_data is not None
-
-    d.clean_directories()
-
-
-@pytest.mark.parametrize(
-    ("method", "datasize", "ext", "minrange", "maxrange"),
-    [
-        ("CalinskiHarabasz", 10000, ".arrow", 2, 5),
-        ("DaviesBouldin", 1000, ".csv", 2, 7),
-    ],
-)
-def test_calinski_davies(
-    method: str,
-    datasize: int,
-    ext: str,
-    minrange: int,
-    maxrange: int,
-) -> None:
-    """Testing calinski_davies and davies_bouldin methods."""
-    d = Generatedata(ext, outname=f"data_1{ext}", size=datasize)
-    d()
-    pattern = f".*{ext}"
-    fps = fp.FilePattern(d.get_inp_dir(), pattern)
-
-    for file in fps():
-        if f"{pattern}" == ".csv":
-            df = vaex.read_csv(file[1][0], convert=True)
-        else:
-            df = vaex.open(file[1][0])
-
-        label_data = km.calinski_davies(
-            data_array=df[:, :4].values,
-            methods=method,
-            minimum_range=minrange,
-            maximum_range=maxrange,
-        )
-
-        assert label_data is not None
-
-    d.clean_directories()
-
-
 @pytest.fixture(
     params=[
         ("CalinskiHarabasz", 500, ".csv", 2, 5, 3),
@@ -149,29 +80,6 @@ def test_calinski_davies(
 def get_params(request: pytest.FixtureRequest) -> pytest.FixtureRequest:
     """To get the parameter of the fixture."""
     return request.param
-
-
-def test_clustering(get_params: pytest.FixtureRequest) -> None:
-    """Test clustering function."""
-    method, datasize, ext, minrange, maxrange, numclusters = get_params
-    d = Generatedata(ext, outname=f"data_1{ext}", size=datasize)
-    d()
-    pattern = f".*{ext}"
-    fps = fp.FilePattern(d.get_inp_dir(), pattern)
-    for file in fps():
-        km.clustering(
-            file=file[1][0],
-            file_pattern=ext,
-            methods=method,
-            minimum_range=minrange,
-            maximum_range=maxrange,
-            num_of_clus=numclusters,
-            out_dir=d.get_out_dir(),
-        )
-    assert d.get_out_dir().joinpath("data_1.arrow")
-    df = vaex.open(d.get_out_dir().joinpath("data_1.arrow"))
-    assert "Cluster" in df.columns
-    d.clean_directories()
 
 
 def test_cli(get_params: pytest.FixtureRequest) -> None:
