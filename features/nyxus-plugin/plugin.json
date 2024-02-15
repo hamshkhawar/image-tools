@@ -74,7 +74,7 @@
     {
       "name": "neighborDist",
       "description": "Pixel distance between neighboring cells",
-      "type": "number",
+      "type": "integer",
       "options": null,
       "required": false
     },
@@ -88,7 +88,7 @@
     {
       "name": "singleRoi",
       "description": "Consider intensity image as single roi and ignoring segmentation mask",
-      "type": "bool",
+      "type": "boolean",
       "options": null,
       "required": false
     }
