@@ -1,8 +1,8 @@
 {
-  "name": "Nyxus plugin",
+  "name": "Nyxus Plugin",
   "version": "0.1.6",
   "containerId": "polusai/nyxus-plugin:0.1.6",
-  "title": "Nyxus plugin",
+  "title": "Nyxus Plugin",
   "description": "Nyxus plugin allows to make use of parallel pocessing for extracting nyxus features",
   "author": "Nick Schaub (nick.schaub@nih.gov), Hamdah Shafqat Abbasi (hamdahshafqat.abbasi@nih.gov)",
   "institution": "National Center for Advancing Translational Sciences, National Institutes of Health",
