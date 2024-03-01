@@ -70,8 +70,10 @@ For Example
 
 Now, renaming files within the `human_ht29_colon_cancer_1_images` is achievable by providing a `filepattern` such as `/.*/.*/.*/Images/(?P<directory>.*)/.*_{row:c}{col:dd}f{f:dd}d{channel:d}.tif`, and specifying `outFilePattern` as `x{row:dd}_y{col:dd}_p{f:dd}_c{channel:d}.tif`. If the mapDirectory option is not utilized, the raw directory name will be appended in the renamed files. To handle directory names containing both letters and digits, employ `(?P<directory>.*)`; use `{directory:c+}` or `{directory:d+}` if it contains solely letters or digits, respectively.
 
-## Note:
+#### Note:
 To extract directory names, the pattern should start with a backslash
+
+
 
 Contact [Melanie Parham](mailto:melanie.parham@axleinfo.com), [Hamdah Shafqat abbasi](mailto:hamdahshafqat.abbasi@nih.gov) for more
 information.
