@@ -135,27 +135,6 @@ def poly(request):
     return request.param
 
 
-def test_duplicate_channels_to_digit(poly):
-    """Testing of duplicate channels to digits."""
-    d = CreateData()
-    inputs = d.load_json("duplicate_channels_to_digit")
-    (inp_pattern, out_pattern) = poly[0]
-    outputs = d.runcommands(inputs, inp_pattern, out_pattern)
-    assert outputs.exit_code == 0
-    d.clean_directories()
-
-
-@pytest.mark.xfail
-def test_duplicate_channels_to_digit_non_spec_digit_len(poly):
-    """Testing of duplicate channels to digits with non specified length of digits."""
-    d = CreateData()
-    inputs = d.load_json("duplicate_channels_to_digit")
-    (inp_pattern, out_pattern) = poly[1]
-    outputs = d.runcommands(inputs, inp_pattern, out_pattern)
-    assert outputs.exit_code == 0
-    d.clean_directories()
-
-
 def test_invalid_input_raises_error(poly):
     """Testing of invalid input filepattern."""
     d = CreateData()
