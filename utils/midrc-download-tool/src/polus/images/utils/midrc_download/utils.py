@@ -8,37 +8,70 @@ from pathlib import Path
 from typing import Any
 from typing import Optional
 from typing import Union
+from typing import Dict
+from typing import List
 
 from pydantic import BaseModel as V2BaseModel
 from pydantic import model_validator
 
 # The URL of the data commons
 ENDPOINT = "https://data.midrc.org"
-
+CONFIG_PATH = Path(__file__).parent.joinpath('properties.json')
 
 KEYS = [
     "credentials",
     "study_modality",
+    "study_description",
     "loinc_method",
-    "midrc_type",
+    "midrc_type.value",
     "loinc_system",
+    "loinc_long_common_name",
+    "days_from_study_to_neg_covid_test",
     "study_year",
+    "study_year_shifted",
+    "days_from_study_to_pos_covid_test",
+    "age_at_imaging",
+    "loinc_contrast",
     "project_id",
+    "body_part_examined",
+    "loinc_code",
     "sex",
     "race",
-    "ethnicity",
     "age_at_index",
-    "loinc_contrast",
-    "body_part_examined",
-    "covid19Positive",
-    "source_node",
+    "index_event",
+    "covid19_positive",
+    "ethnicity",
     "data_format",
+    "data_type",
     "data_category",
-    "data_Type",
+    "data_file_annotation_name",
+    "data_file_annotation_method",
+    "midrc_mRALE_score",
+    "test_days_from_index",
+    "test_method",
+    "test_name",
+    "test_days_from_index",
+    "test_result_text",
+    "condition_name",
+    "condition_code_system",
+    "condition_code",
+    "days_to_condition_start",
+    "days_to_condition_end",
+    "days_to_medication_start",
+    "dose_sequence_number",
+    "medication_code",
+    "medication_manufacturer",
+    "medication_name",
+    "medication_type",
+    "annotation_method",
+    "annotation_id",
+    "breathing_support_type",
+    "source_node",
     "first",
     "offset",
-    "out_dir",
-]
+    "out_dir"
+    ]
+
 
 
 class MIDRCTYPES(str, enum.Enum):
@@ -50,225 +83,6 @@ class MIDRCTYPES(str, enum.Enum):
     ANNOTATION = "annotation"
     MEASUREMENT = "measurement"
 
-
-DATATYPE = ["imaging_study", "case", "data_file", "annotation", "measurement"]
-SEX = ["Female", "Male", "no data", "Not Reported"]
-RACE = ["White", "Black or African American", "no data", "Not Reported", "Asian"]
-ETHNICITY = ["Not Hispanic or Latino", "Hispanic or Latino", "no data", "Not Reported"]
-COVID19_POSITIVE = ["Yes", "No", "no data", "Not Reported"]
-STUDY_MODALITY = [
-    "CR",
-    "DX",
-    "CT",
-    "MR",
-    "CTPT",
-    "RF" "CRDX",
-    "MG",
-    "NM",
-    "PT",
-    "DR",
-    "OT",
-    "SR",
-    "PR",
-    "US",
-    "XA",
-]
-LOINC_CONTRAST = ["W", "WO", "WO & W", "no data"]
-LOINC_METHOD = [
-    "XR.portable",
-    "XR",
-    "CT",
-    "CT.angio",
-    "CT && CT.angio",
-    "MR",
-    "PT+CT",
-    "RF",
-    "MG",
-    "US",
-    "no data",
-]
-BODY_PART_EXAMINED = [
-    "CHEST",
-    "no data",
-    "PORT CHEST",
-    "ABDOMEN",
-    "HEAD",
-    "PORT ABDOMEN",
-    "SKULL",
-    "Chest",
-    "SPINE",
-    "AORTA",
-    "KIDNEY",
-    "CHESTABDOMEN",
-    "HEART",
-    "CHEST_TO_PELVIS",
-    "UNKNOWN",
-    "PELVIS",
-    "FOOT",
-    "KNEE",
-    "SERVICE",
-    "PE CHEST",
-    "BRAIN",
-    "NECK",
-    "RIB",
-    "DEFAULT",
-    "LSPINE",
-    "SHOULDER",
-    "CHEST ABD PELVIS",
-    "HAND",
-    "HIP",
-    "RIBS",
-    "ANKLE",
-    "CAP",
-    "CHESTABDPELVIS",
-    "ABDOMENPELVIS",
-    "CHEST_ABDOMEN",
-    "ABD PEL",
-    "BODY",
-    "CHEST ABD PELVIS",
-    "L SPINE",
-    "Ankle",
-    "Knee",
-    "LUMBAR_SPINE",
-    "C SPINE",
-    "C_A_P",
-    "ELBOW",
-    "EXTREMITY",
-    "THORAX",
-    "TSPINE",
-    "WRIST",
-    "BLADDER",
-    "CERVICAL_SPINE",
-    "CHEST AB PEL",
-    "CHEST LUNG",
-    "FACIAL",
-    "FEMUR",
-    "FOREARM",
-    "Hip",
-    "KIDNEY_URETER_BL",
-    "LEG",
-    "LUNG",
-    "PEDIATRIC CHEST",
-    "PORTABLE CHEST",
-    "SHOULDER_SCAPULA",
-    "ABD",
-    "ABDOMEN_PELVIS",
-    "BABYGRAM",
-    "BREAST",
-    "CARDIO",
-    "CHEST LATERAL",
-    "CHEST PA X-WISE",
-    "CHEST LAT",
-    "CHEST PE",
-    "CHEST_LOW EXT",
-    "CHES_ABD_PEL",
-    "CHSTABDPELV",
-    "CLAVICLE",
-    "CSPINE",
-    "CTA CHEST",
-    "CXR",
-    "FOOT LAT",
-    "FOOT_ANKLE",
-    "Finger",
-    "Foot",
-    "HEAD AND NECK",
-    "LOWER EXTREMITY",
-    "LOW_EXM",
-    "NECK CHEST",
-    "ORBIT",
-    "ORBITS",
-    "PE",
-    "PORT C SPINE",
-    "Ribs",
-    "SSPINE",
-    "TBFB_CALF",
-    "THORAXABD",
-    "TIBIA FIBULA",
-]
-
-
-LOINC_SYSTEM = [
-    "Chest",
-    "Unspecified",
-    "no data",
-    "Chest+Abdomen+Pelvis",
-    "Head",
-    "Abdomen",
-    "Abdomen+Pelvis",
-    "Chest>Chest vessels",
-    "Chest+Abdomen",
-    "Chest>Ribs",
-    "Head>Head vessels & Neck>Neck vessels",
-    "Chest>Chest vessels & Abdomen>Abdominal vessels & Pelvis>Pelvis vessels",
-    "Whole body",
-    "Chest>Heart+Coronary arteries",
-    "Chest && Abdomen",
-    "Head>Facial bones",
-    "Chest>Heart",
-    "Neck>Neck vessels",
-    "Chest>Chest vessels & Abdomen>Abdominal vessels",
-    "Chest+Abdomen+Pelvis && Chest>Aorta.thoracic & Abdomen>Aorta.abdominal",
-    "Pelvis",
-    "Abdomen>Abdominal vessels & Pelvis>Pelvis vessels",
-    "Chest>Esophagus",
-    "Abdomen && Chest+Abdomen+Pelvis",
-    "Chest>Ribs && Chest",
-    "Breast",
-    "Chest>Spine.thoracic & Abdomen>Spine.lumbar",
-]
-
-
-PROJECT_ID = [
-    "TCIA-COVID-19-NY-SBU",
-    "Open-R1",
-    "Open-A1",
-    "Open-A1_SCCM_VIRUS",
-    "Open-A1_PETAL_BLUECORAL",
-    "Open-A1_PETAL_REDCORAL",
-    "TCIA-COVID-19_CT_Images",
-    "TCIA-COVID-19-AR",
-    "TCIA-RICORD",
-]
-
-
-SOURCE_NODE = [
-    "ct_series_file",
-    "cr_series_file",
-    "dx_series_file",
-    "dicom_annotation_file",
-    "annotation_file",
-    "mr_series_file",
-    "supplementary_file",
-    "nm_series_file",
-    "pt_series_file",
-    "rf_series_file",
-]
-
-
-DATA_FORMAT = ["DCM", "JSON", "CSV", "nii.gz", "TSV", "Clinical Metadata", "XLSX"]
-
-DATA_CATEGORY = [
-    "CT",
-    "CR",
-    "DX",
-    "DICOM Annotation Series File",
-    "annotation_file",
-    "MR",
-    "Clinical Supplement",
-    "NM",
-    "PT",
-    "RF",
-    "Image Annotations",
-]
-DATA_TYPE = [
-    "DICOM",
-    "MIDRC Annotation",
-    "NIfTI",
-    "Clinical Metadata",
-    "TSV",
-    "Clinical Data",
-    "Image Annotations",
-]
 
 # fields to return.
 fields = [
@@ -311,6 +125,31 @@ def get_params(values: Iterable[str]) -> dict:
 
 custom_hint = Union[str, list[str]]
 data_hint = Any
+
+class TestCustomValidation(V2BaseModel):
+    params: Dict[str, Union[str, int, List[str], Path]]
+
+    def parse_json(self) -> Dict[str, Union[str, bool]]:
+        """Parsing yaml configuration file for each dataset."""
+
+        with open(f'{CONFIG_PATH}','r') as f: 
+            data = json.load(f)
+        
+        exclude_keys = ['credentials', 'first', 'offset','out_dir']
+
+        param_keys = [f for f in list(self.params.keys()) if f not in exclude_keys]
+
+        for key, value in self.params.items():
+
+            if key in list(data.keys()):
+
+                if value in data[key]:
+
+                
+                    print('true')
+                    break
+
+
 
 
 class CustomValidation(V2BaseModel):
