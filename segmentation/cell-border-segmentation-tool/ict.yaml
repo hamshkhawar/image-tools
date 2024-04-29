@@ -2,7 +2,7 @@ author:
 - Nick Schaub
 - Hamdah Shafqat
 contact: nick.schaub@nih.gov
-container: polusai/cell-border-segmentation-tool:0.2.4-dev0
+container: polusai/cell-border-segmentation-tool:0.2.4-dev1
 description: Segment cell borders of epithelial cells.
 entrypoint: python3 -m polus.images.segmentation.cell_border_segmentation
 inputs:
@@ -32,7 +32,7 @@ outputs:
   name: outDir
   required: true
   type: path
-repository: https://github.com/polusai/polus-plugins
+repository: https://github.com/polusai/polus-images
 specVersion: 1.0.0
 title: Cell Border Segmentation
 ui:
@@ -48,4 +48,4 @@ ui:
   key: inputs.preview
   title: Preview example output of this plugin
   type: checkbox
-version: 0.2.4-dev0
+version: 0.2.4-dev1

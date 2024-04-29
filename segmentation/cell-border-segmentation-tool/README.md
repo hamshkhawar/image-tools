@@ -1,4 +1,4 @@
-# Cell Border Segmentation(v0.2.4-dev0)
+# Cell Border Segmentation(v0.2.4-dev1)
 
 This plugin segments epithelial cell borders which are labeled with fluorescent proteins that highlight cell borders while leaving the cell body dark.
 This was orginally designed to segment retinal epithelial cells, fluorescently labeled with zonula occluden-1 (ZO1) tight junction protein. The magnifications this was trained on varied from 10x to 40x, so it should work well on a wide range of magnifications.

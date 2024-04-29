@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "polus-images-segmentation-cell-border-segmentation"
-version = "0.2.4-dev0"
+version = "0.2.4-dev1"
 description = "This plugin segments cell border of fluorescently labeled epithelial cells"
 authors = [
            "Nick Schaub <nick.schaub@nih.gov>",
@@ -12,7 +12,7 @@ packages = [{include = "polus", from = "src"}]
 [tool.poetry.dependencies]
 python = ">=3.9,<3.12"
 bfio = {version = "2.3.2", extras = ["all"]}
-tensorflow="^2.14.0"
+tensorflow="2.14.0"
 typer = "^0.7.0"
 filepattern = "^2.0.1"
 scyjava = "^1.9.1"

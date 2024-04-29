@@ -24,7 +24,7 @@ outputs:
     type: Directory
 requirements:
   DockerRequirement:
-    dockerPull: polusai/cell-border-segmentation-tool:0.2.4-dev0
+    dockerPull: polusai/cell-border-segmentation-tool:0.2.4-dev1
   InitialWorkDirRequirement:
     listing:
     - entry: $(inputs.outDir)
