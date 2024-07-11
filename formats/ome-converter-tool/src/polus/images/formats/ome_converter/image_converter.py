@@ -93,6 +93,14 @@ def convert_image(
 
                     # Loop through z-slices
                     for z in range(br.Z):
+                        if br.Z > 1:
+                            out_path = out_dir.joinpath(
+                                out_path.name.replace(
+                                    file_extension,
+                                    f"_z{z}" + file_extension,
+                                ),
+                            )
+
                         # Loop across the length of the image
                         for y in range(0, br.Y, TILE_SIZE):
                             y_max = min([br.Y, y + TILE_SIZE])
