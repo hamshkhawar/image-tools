@@ -17,7 +17,7 @@ logging.basicConfig(
     datefmt="%d-%b-%y %H:%M:%S",
 )
 POLUS_LOG = getattr(logging, environ.get("POLUS_LOG", "INFO"))
-logger = logging.getLogger("polus.plugins.formats.image_dimension_stacking")
+logger = logging.getLogger("polus.images.formats.image_dimension_stacking")
 logger.setLevel(POLUS_LOG)
 logging.getLogger("bfio").setLevel(POLUS_LOG)
 
