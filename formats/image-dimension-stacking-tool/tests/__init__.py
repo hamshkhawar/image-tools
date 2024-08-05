@@ -1,1 +1,0 @@
-"""Image dimension stacking package."""
