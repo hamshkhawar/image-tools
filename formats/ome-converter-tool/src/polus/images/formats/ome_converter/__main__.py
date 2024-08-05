@@ -3,7 +3,6 @@ import json
 import logging
 import os
 import pathlib
-from concurrent.futures import as_completed
 from typing import Any
 from typing import Optional
 
@@ -13,7 +12,6 @@ import typer
 from polus.images.formats.ome_converter.image_converter import NUM_THREADS
 from polus.images.formats.ome_converter.image_converter import Extension
 from polus.images.formats.ome_converter.image_converter import convert_image
-from tqdm import tqdm
 
 app = typer.Typer()
 
@@ -96,16 +94,8 @@ def main(
                 executor.submit_process(convert_image, file, file_extension, out_dir),
             )
 
-        for f in tqdm(
-            as_completed(threads),
-            total=len(threads),
-            mininterval=5,
-            desc=f"converting images to {file_extension}",
-            initial=0,
-            unit_scale=True,
-            colour="cyan",
-        ):
-            f.result()
+        # for f in tqdm(
+        # ):
 
 
 if __name__ == "__main__":
