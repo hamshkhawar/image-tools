@@ -6,7 +6,7 @@ tool_name="ome-converter-tool"
 
 # The version is read from the VERSION file
 version=$(<VERSION)
-tag="polusai/${tool_name}:${version}"
+tag="hamshkhawar/${tool_name}:${version}"
 echo "Building docker image with tag: ${tag}"
 
 # The current directory and the repository root are saved in variables
