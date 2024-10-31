@@ -2,7 +2,7 @@ author:
   - Nick Schaub
   - Hamdah Shafqat
 contact: nick.schaub@nih.gov
-container: polusai/ome-converter-tool:0.3.3-dev3
+container: hamshkhawar/ome-converter-tool:0.3.3-dev3
 description: Convert Bioformats supported format to OME Zarr or OME TIF
 entrypoint: python3 -m polus.images.formats.ome_converter
 inputs:
@@ -18,7 +18,7 @@ inputs:
     name: filePattern
     required: true
     type: string
-name: polusai/OMEConverter
+name: hamshkhawar/OMEConverter
 outputs:
   - description: Output collection
     format:
