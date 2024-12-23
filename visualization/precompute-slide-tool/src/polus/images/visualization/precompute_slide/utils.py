@@ -1,12 +1,20 @@
-import copy, os, json, filepattern, imageio, pathlib, typing, abc, zarr
-import bfio
-import numpy as np
-from numcodecs import Blosc
-from concurrent.futures import ThreadPoolExecutor
-from preadator import ProcessManager
-from bfio.OmeXml import OMEXML
+import abc
+import copy
+import json
 import logging
+import os
+import pathlib
+import typing
+from concurrent.futures import ThreadPoolExecutor
 from enum import Enum
+
+import bfio
+import imageio
+import numpy as np
+import zarr
+from bfio.OmeXml import OMEXML
+from numcodecs import Blosc
+from preadator import ProcessManager
 
 logging.getLogger("bfio").setLevel(logging.CRITICAL)
 
@@ -37,7 +45,7 @@ CHUNK_SIZE = 1024
 
 
 def _mode2(image: np.ndarray) -> np.ndarray:
-    """Find mode of pixels in optical field 2x2 and stride 2
+    """Find mode of pixels in optical field 2x2 and stride 2.
 
     This method approximates the mode by finding the largest number that occurs
     at least twice in a 2x2 grid of pixels, then sets that value to the output
@@ -45,16 +53,16 @@ def _mode2(image: np.ndarray) -> np.ndarray:
 
     Args:
         image - numpy array with only two dimensions (m,n)
+
     Returns:
         mode_img - numpy array with only two dimensions (round(m/2),round(n/2))
     """
-
     y_max = image.shape[0] - image.shape[0] % 2
     x_max = image.shape[1] - image.shape[1] % 2
 
     # Initialize the mode output image (Half the size)
     mode_img = np.zeros(
-        np.ceil([d / 2 for d in image.shape]).astype(int), dtype=image.dtype
+        np.ceil([d / 2 for d in image.shape]).astype(int), dtype=image.dtype,
     )
 
     # Default the output to the upper left pixel value
@@ -70,8 +78,6 @@ def _mode2(image: np.ndarray) -> np.ndarray:
 
     # Garnering the four different pixels that we would find the modes of
     # Finding the mode of:
-    # vals00[1], vals01[1], vals10[1], vals11[1]
-    # vals00[2], vals01[2], vals10[2], vals11[2]
     # etc
     vals00 = image[0:-1:2, 0:-1:2]
     vals01 = image[0:-1:2, 1::2]
@@ -99,14 +105,14 @@ def _mode2(image: np.ndarray) -> np.ndarray:
 
 
 def _avg2(image: np.ndarray) -> np.ndarray:
-    """Average pixels together with optical field 2x2 and stride 2
+    """Average pixels together with optical field 2x2 and stride 2.
 
     Args:
         image - numpy array with only two dimensions (m,n)
+
     Returns:
         avg_img - numpy array with only two dimensions (round(m/2),round(n/2))
     """
-
     # Since we are adding pixel values, we need to update the pixel type
     # This helps to avoid integer overflow
     if image.dtype == np.uint8:
@@ -175,9 +181,9 @@ class PyramidWriter:
         image_path: typing.Union[pathlib.Path, str],
         image_depth: int = 0,
         output_depth: int = 0,
-        max_output_depth: int = None,
+        max_output_depth: typing.Optional[int] = None,
         image_type: ImageType = ImageType.image,
-    ):
+    ) -> None:
         if isinstance(image_path, str):
             image_path = pathlib.Path(image_path)
         self.image_path = image_path
@@ -194,10 +200,11 @@ class PyramidWriter:
         elif image_type == ImageType.segmentation:
             self.scale = _mode2
         else:
-            raise ValueError('image_type must be one of ["image","segmentation"]')
+            msg = 'image_type must be one of ["image","segmentation"]'
+            raise ValueError(msg)
 
         self.info = bfio_metadata_to_slide_info(
-            self.image_path, self.base_path, self.max_output_depth, self.image_type
+            self.image_path, self.base_path, self.max_output_depth, self.image_type,
         )
 
         self.dtype = self.info["data_type"]
@@ -237,20 +244,19 @@ class PyramidWriter:
                 scale_info = res
                 break
 
-        if scale_info == None:
-            ValueError("No scale information for resolution {}.".format(S))
+        if scale_info is None:
+            ValueError(f"No scale information for resolution {S}.")
 
         return scale_info
 
     def store_chunk(self, image, key, chunk_coords):
-        """Store a pyramid chunk
+        """Store a pyramid chunk.
 
         Inputs:
             image: byte stream to save to disk
             key: pyramid scale, folder to save chunk to
             chunk_coords: X,Y,Z coordinates of data in buf
         """
-
         buf = self.encoder.encode(image)
 
         self._write_chunk(key, chunk_coords, buf)
@@ -264,20 +270,21 @@ class PyramidWriter:
 
     def _chunk_coords(self, chunk_coords):
         if len(chunk_coords) == 4:
-            chunk_coords = chunk_coords + (self.output_depth, self.output_depth + 1)
+            chunk_coords = (*chunk_coords, self.output_depth, self.output_depth + 1)
         elif len(chunk_coords) != 6:
-            raise ValueError("chunk_coords must be a 4-tuple or a 6-tuple.")
+            msg = "chunk_coords must be a 4-tuple or a 6-tuple."
+            raise ValueError(msg)
         return chunk_coords
 
 
 def _get_higher_res(
     S: int,
     slide_writer: PyramidWriter,
-    X: typing.Tuple[int, int] = None,
-    Y: typing.Tuple[int, int] = None,
-    Z: typing.Tuple[int, int] = (0, 1),
+    X: typing.Optional[tuple[int, int]] = None,
+    Y: typing.Optional[tuple[int, int]] = None,
+    Z: tuple[int, int] = (0, 1),
 ):
-    """ Recursive function for pyramid building
+    """Recursive function for pyramid building.
 
     This is a recursive function that builds an image pyramid by indicating
     an original region of an image at a given scale. This function then
@@ -289,7 +296,7 @@ def _get_higher_res(
     Scale S=0                     1234
                                  /    \
     Scale S=1                  12      34
-                              /  \    /  \
+                              /  \\    /  \
     Scale S=2                1    2  3    4
 
     At scale 2 (the highest resolution) there are 4 original images. At scale 1,
@@ -313,13 +320,12 @@ def _get_higher_res(
     Returns:
         image: The image corresponding to the X,Y values at scale S
     """
-
     # Get the scale info
     scale_info = slide_writer.scale_info(S)
 
-    if X == None:
+    if X is None:
         X = [0, scale_info["size"][0]]
-    if Y == None:
+    if Y is None:
         Y = [0, scale_info["size"][1]]
 
     # Modify upper bound to stay within resolution dimensions
@@ -347,7 +353,7 @@ def _get_higher_res(
         for dim in subgrid_dims:
             while dim[1] - dim[0] > CHUNK_SIZE:
                 dim.insert(
-                    1, dim[0] + ((dim[1] - dim[0] - 1) // CHUNK_SIZE) * CHUNK_SIZE
+                    1, dim[0] + ((dim[1] - dim[0] - 1) // CHUNK_SIZE) * CHUNK_SIZE,
                 )
 
         def load_and_scale(*args, **kwargs):
@@ -392,13 +398,13 @@ def _get_higher_res(
 
 
 class NeuroglancerWriter(PyramidWriter):
-    """Method to write a Neuroglancer pre-computed pyramid
+    """Method to write a Neuroglancer pre-computed pyramid.
 
     Inputs:
         base_dir - Where pyramid folders and info file will be stored
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.chunk_pattern = "{key}/{0}-{1}_{2}-{3}_{4}-{5}"
 
@@ -448,13 +454,12 @@ class NeuroglancerWriter(PyramidWriter):
 
         # Don't create a full pyramid to help reduce bounding box size
         start_level = int(self.info["scales"][-1]["key"])
-        image = _get_higher_res(
-            start_level, self, Z=(self.image_depth, self.image_depth + 1)
+        _get_higher_res(
+            start_level, self, Z=(self.image_depth, self.image_depth + 1),
         )
 
     def write_info(self):
-        """This creates the info file specifying the metadata for the precomputed format"""
-
+        """This creates the info file specifying the metadata for the precomputed format."""
         # Create an output path object for the info file
         op = pathlib.Path(self.base_path)
         op.mkdir(exist_ok=True, parents=True)
@@ -468,10 +473,11 @@ class NeuroglancerWriter(PyramidWriter):
             self._write_segment_info()
 
     def _write_segment_info(self):
-        """This function creates the info file needed to segment the image"""
+        """This function creates the info file needed to segment the image."""
         if self.image_type != ImageType.segmentation:
+            msg = 'The NeuroglancerWriter object must have image_type = "segmentation" to use write_segment_info.'
             raise TypeError(
-                'The NeuroglancerWriter object must have image_type = "segmentation" to use write_segment_info.'
+                msg,
             )
 
         op = pathlib.Path(self.base_path).joinpath("infodir")
@@ -508,20 +514,20 @@ class NeuroglancerWriter(PyramidWriter):
 
 
 class ZarrWriter(PyramidWriter):
-    """Method to write a Zarr pyramid
+    """Method to write a Zarr pyramid.
 
     Inputs:
         base_dir - Where pyramid folders and info file will be stored
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 
         out_name = self.base_path.name.replace("".join(self.base_path.suffixes), "")
         self.base_path = self.base_path.with_name(out_name)
         self.base_path.mkdir(exist_ok=True)
         self.root = zarr.open(
-            str(self.base_path.joinpath("data.zarr").resolve()), mode="a"
+            str(self.base_path.joinpath("data.zarr").resolve()), mode="a",
         )
         if "0" in self.root.group_keys():
             self.root = self.root["0"]
@@ -537,16 +543,14 @@ class ZarrWriter(PyramidWriter):
             if key not in self.root.array_keys():
                 self.writers[key] = self.root.zeros(
                     key,
-                    shape=(1, self.max_output_depth, 1)
-                    + (scale_info["size"][1], scale_info["size"][0]),
+                    shape=(1, self.max_output_depth, 1, scale_info["size"][1], scale_info["size"][0]),
                     chunks=(1, 1, 1, CHUNK_SIZE, CHUNK_SIZE),
                     dtype=self.dtype,
                     compressor=compressor,
                 )
             else:
                 self.root[key].resize(
-                    (1, self.max_output_depth, 1)
-                    + (scale_info["size"][1], scale_info["size"][0])
+                    (1, self.max_output_depth, 1, scale_info["size"][1], scale_info["size"][0]),
                 )
                 self.writers[key] = self.root[key]
 
@@ -569,7 +573,7 @@ class ZarrWriter(PyramidWriter):
         _get_higher_res(0, self, Z=(self.image_depth, self.image_depth + 1))
 
     def write_info(self):
-        """This creates the multiscales metadata for zarr pyramids"""
+        """This creates the multiscales metadata for zarr pyramids."""
         # https://forum.image.sc/t/multiscale-arrays-v0-1/37930
         multiscales = [
             {
@@ -577,10 +581,10 @@ class ZarrWriter(PyramidWriter):
                 "name": self.base_path.name,
                 "datasets": [],
                 "metadata": {"method": "mean"},
-            }
+            },
         ]
 
-        pad = len(self.scale_info(-1)["key"])
+        len(self.scale_info(-1)["key"])
         max_scale = int(self.scale_info(-1)["key"])
         for S in reversed(range(len(self.info["scales"]))):
             scale_info = self.scale_info(S)
@@ -601,20 +605,19 @@ class ZarrWriter(PyramidWriter):
 
 
 class DeepZoomWriter(PyramidWriter):
-    """Method to write a DeepZoom pyramid
+    """Method to write a DeepZoom pyramid.
 
     Inputs:
         base_dir - Where pyramid folders and info file will be stored
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.chunk_pattern = "{key}/{0}_{1}.png"
         self.base_path = self.base_path.joinpath(str(self.output_depth) + "_files")
 
     def _chunk_coords(self, chunk_coords):
-        chunk_coords = [chunk_coords[0] // CHUNK_SIZE, chunk_coords[2] // CHUNK_SIZE]
-        return chunk_coords
+        return [chunk_coords[0] // CHUNK_SIZE, chunk_coords[2] // CHUNK_SIZE]
 
     def _write_chunk(self, key, chunk_coords, buf):
         chunk_path = self._chunk_path(key, chunk_coords)
@@ -629,7 +632,7 @@ class DeepZoomWriter(PyramidWriter):
     def write_info(self):
         # Create an output path object for the info file
         op = pathlib.Path(self.base_path).parent.joinpath(
-            "{}.dzi".format(self.output_depth)
+            f"{self.output_depth}.dzi",
         )
 
         # DZI file template
@@ -642,7 +645,7 @@ class DeepZoomWriter(PyramidWriter):
                     CHUNK_SIZE,
                     self.info["scales"][0]["size"][0],
                     self.info["scales"][0]["size"][1],
-                )
+                ),
             )
 
     def _write_slide(self):
@@ -654,7 +657,8 @@ class DeepZoomWriter(PyramidWriter):
         return DeepZoomChunkEncoder(self.info)
 
     def write_segment_info(self):
-        raise NotImplementedError("DeepZoom does not have a segmentation format.")
+        msg = "DeepZoom does not have a segmentation format."
+        raise NotImplementedError(msg)
 
 
 # Modified and condensed from multiple functions and classes
@@ -673,27 +677,26 @@ class ChunkEncoder:
         "float32",
     )
 
-    def __init__(self, info):
+    def __init__(self, info) -> None:
         try:
             data_type = info["data_type"]
             num_channels = info["num_channels"]
         except KeyError as exc:
+            msg = f"The info dict is missing an essential key {exc}"
             raise KeyError(
-                "The info dict is missing an essential key {0}".format(exc)
+                msg,
             ) from exc
 
         if not isinstance(num_channels, int) or not num_channels > 0:
+            msg = f"Invalid value {num_channels} for num_channels (must be a positive integer)"
             raise KeyError(
-                "Invalid value {0} for num_channels (must be a positive integer)".format(
-                    num_channels
-                )
+                msg,
             )
 
         if data_type not in ChunkEncoder.DATA_TYPES:
+            msg = f"Invalid data_type {data_type} (should be one of {ChunkEncoder.DATA_TYPES})"
             raise KeyError(
-                "Invalid data_type {0} (should be one of {1})".format(
-                    data_type, ChunkEncoder.DATA_TYPES
-                )
+                msg,
             )
 
         self.info = info
@@ -711,9 +714,8 @@ class NeuroglancerChunkEncoder(ChunkEncoder):
         Inputs:
             chunk - array with 2 dimensions
         Outputs:
-            buf - encoded chunk (byte stream)
+            buf - encoded chunk (byte stream).
         """
-
         # Rearrange the image for Neuroglancer
         chunk = np.moveaxis(
             chunk.reshape(chunk.shape[0], chunk.shape[1], 1, 1),
@@ -723,8 +725,7 @@ class NeuroglancerChunkEncoder(ChunkEncoder):
         chunk = np.asarray(chunk).astype(self.dtype)
         assert chunk.ndim == 4
         assert chunk.shape[0] == self.num_channels
-        buf = chunk.tobytes()
-        return buf
+        return chunk.tobytes()
 
 
 class ZarrChunkEncoder(ChunkEncoder):
@@ -733,20 +734,18 @@ class ZarrChunkEncoder(ChunkEncoder):
         Inputs:
             chunk - array with 2 dimensions
         Outputs:
-            buf - encoded chunk (byte stream)
+            buf - encoded chunk (byte stream).
         """
-
         # Rearrange the image for Neuroglancer
         chunk = chunk.reshape(chunk.shape[0], chunk.shape[1], 1, 1, 1).transpose(
-            4, 2, 3, 0, 1
+            4, 2, 3, 0, 1,
         )
-        chunk = np.asarray(chunk).astype(self.dtype)
-        return chunk
+        return np.asarray(chunk).astype(self.dtype)
 
 
 class DeepZoomChunkEncoder(ChunkEncoder):
     def encode(self, chunk):
-        """Encode a chunk for DeepZoom
+        """Encode a chunk for DeepZoom.
 
         Nothing special to do for encoding except checking the number of
         dimentions.
@@ -762,9 +761,9 @@ class DeepZoomChunkEncoder(ChunkEncoder):
 
 
 def bfio_metadata_to_slide_info(
-    image_path, outPath, stackheight, imagetype, min_scale=0
+    image_path, outPath, stackheight, imagetype, min_scale=0,
 ):
-    """Generate a Neuroglancer info file from Bioformats metadata
+    """Generate a Neuroglancer info file from Bioformats metadata.
 
     Neuroglancer requires an info file in the root of the pyramid directory.
     All information necessary for this info file is contained in Bioformats

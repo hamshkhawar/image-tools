@@ -2,14 +2,14 @@
 
 Set up all data used in tests.
 """
-import tempfile
-from pathlib import Path
-import pytest
-from typing import Generator
-import numpy
 import itertools
-import bfio
+import tempfile
+from collections.abc import Generator
+from pathlib import Path
 
+import bfio
+import numpy
+import pytest
 from polus.plugins.visualization.precompute_slide import utils
 
 
@@ -36,7 +36,7 @@ IMAGE_SIZES = [1024 * (2**i) for i in range(1)]
 PARAMS = [
     (image_size, pixel_type, pyramid_type, image_type)
     for image_size, pixel_type, pyramid_type, image_type in itertools.product(
-        IMAGE_SIZES, PIXEL_TYPES, list(utils.PyramidType), list(utils.ImageType)
+        IMAGE_SIZES, PIXEL_TYPES, list(utils.PyramidType), list(utils.ImageType),
     )
     if not (pyramid_type.value == "DeepZoom" and image_type.value == "segmentation")
 ]
@@ -44,7 +44,7 @@ PARAMS = [
 
 @pytest.fixture(params=PARAMS)
 def random_ome_tiff_images(
-    request: pytest.FixtureRequest, plugin_dirs: tuple[Path, Path]
+    request: pytest.FixtureRequest, plugin_dirs: tuple[Path, Path],
 ) -> tuple[Path, str, str]:
     """Generate ome tiff images for combination of any user defined params."""
     image_size: int
@@ -53,12 +53,11 @@ def random_ome_tiff_images(
     image_size, pixel_type, pyramid_type, image_type = request.param
     inp_dir, _ = plugin_dirs
     # no need to create temporary folder as each combination will run in a separate test folder.
-    # inp_dir = inp_dir / tempfile.mkdtemp(dir=inp_dir)
 
     # generate image data
     rng = numpy.random.default_rng(42)
     image: numpy.ndarray = rng.uniform(0.0, 1.0, (image_size, image_size)).astype(
-        pixel_type
+        pixel_type,
     )
 
     # for segmentation, we generate standard 8bits mask instead
@@ -67,7 +66,7 @@ def random_ome_tiff_images(
 
     with bfio.BioWriter(
         inp_dir
-        / f"img_{image_size}x{image_size}_{pixel_type.__name__}_{image_type}_{pyramid_type}.ome.tif"
+        / f"img_{image_size}x{image_size}_{pixel_type.__name__}_{image_type}_{pyramid_type}.ome.tif",
     ) as writer:
         (y, x) = image.shape
         writer.Y = y

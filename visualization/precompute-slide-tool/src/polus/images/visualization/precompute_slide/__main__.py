@@ -4,11 +4,12 @@
 import logging
 from os import environ
 from pathlib import Path
-from typing_extensions import Annotated
-from enum import Enum
+
 import typer
+
 from .precompute_slide import precompute_slide
-from .utils import PyramidType, ImageType
+from .utils import ImageType
+from .utils import PyramidType
 
 logging.basicConfig(
     format="%(asctime)s - %(name)-8s - %(levelname)-8s - %(message)s",
@@ -79,7 +80,6 @@ def main(
     ),
 ):
     """Precompute slide plugin command line."""
-
     logger.info(f"inpDir: {inp_dir}")
     logger.info(f"filePattern: {filepattern}")
     logger.info(f"outDir: {out_dir}")
@@ -91,10 +91,12 @@ def main(
         inp_dir = inp_dir.joinpath("images")
     logger.info(f"changing input_dir to  {inp_dir}")
     if not inp_dir.exists():
-        raise ValueError("inpDir does not exist", inp_dir)
+        msg = "inpDir does not exist"
+        raise ValueError(msg, inp_dir)
 
     if not out_dir.exists():
-        raise ValueError("outDir does not exist", out_dir)
+        msg = "outDir does not exist"
+        raise ValueError(msg, out_dir)
 
     if preview:
         logger.info("Previewing the output without running the plugin")
@@ -107,7 +109,7 @@ def main(
         and pyramid_type != PyramidType.neuroglancer
     ):
         raise ValueError(
-            "Segmentation type can only be used for Neuroglancer pyramids."
+            "Segmentation type can only be used for Neuroglancer pyramids.",
         )
 
     precompute_slide(inp_dir, pyramid_type, image_type, filepattern, out_dir)

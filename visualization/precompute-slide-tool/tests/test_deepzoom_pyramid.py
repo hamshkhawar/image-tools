@@ -1,25 +1,21 @@
-from bfio import BioReader, BioWriter
-from pytest import fixture
-import tempfile
-import numpy as np
 from pathlib import Path
-import random
+
+import numpy as np
+from bfio import BioWriter
 from polus.plugins.visualization.precompute_slide.precompute_slide import (
     precompute_slide,
 )
-import os
-import zarr
-from tests.fixtures import plugin_dirs, get_temp_file
+from pytest import fixture
+
+from tests.fixtures import get_temp_file
 
 
-@fixture
+@fixture()
 def image_file(plugin_dirs):
-    """
-    Generate a simple base image of a centered white square
+    """Generate a simple base image of a centered white square
     over a black background that can be easily check visually.
     We will build the pyramid from it.
     """
-
     input_dir, _ = plugin_dirs
 
     # generate the base image data
@@ -47,10 +43,7 @@ def image_file(plugin_dirs):
 
 
 def test_deepzoom_pyramid(plugin_dirs: tuple[Path, Path], image_file):
-    """
-    Test the creation of a deepzoom pyramid.
-    """
-
+    """Test the creation of a deepzoom pyramid."""
     input_dir, output_dir = plugin_dirs
 
     precompute_slide(input_dir, "DeepZoom", "image", ".*", output_dir)

@@ -1,6 +1,5 @@
 """Precompute slide plugin."""
 
-import argparse
 import logging
 import multiprocessing
 import pathlib
@@ -12,10 +11,9 @@ from preadator import ProcessManager
 
 from . import utils
 
-
 POLUS_LOG = getattr(logging, environ.get("POLUS_LOG", "INFO"))
 logger = logging.getLogger(
-    "polus.plugins.visualization.precompute_slide.precompute_slide"
+    "polus.plugins.visualization.precompute_slide.precompute_slide",
 )
 logger.setLevel(POLUS_LOG)
 
@@ -95,10 +93,7 @@ def precompute_slide(
 
         for file in files:
             with bfio.BioReader(file, max_workers=1) as br:
-                if utils.PyramidType.zarr:
-                    d_z = br.c
-                else:
-                    d_z = br.z
+                d_z = br.c if utils.PyramidType.zarr else br.z
 
             depth_max += d_z
 

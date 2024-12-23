@@ -1,25 +1,24 @@
-from bfio import BioReader, BioWriter
-from pytest import fixture
-import tempfile
-import numpy as np
+import os
 from pathlib import Path
-import random
+
+import numpy as np
+import zarr
+from bfio import BioReader
+from bfio import BioWriter
 from polus.plugins.visualization.precompute_slide.precompute_slide import (
     precompute_slide,
 )
-import os
-import zarr
-from tests.fixtures import plugin_dirs, get_temp_file
+from pytest import fixture
+
+from tests.fixtures import get_temp_file
 
 
-@fixture
+@fixture()
 def image_file(plugin_dirs):
-    """
-    Generate a simple base image of a centered white square
+    """Generate a simple base image of a centered white square
     over a black background that can be easily check visually.
     We will build the pyramid from it.
     """
-
     input_dir, _ = plugin_dirs
 
     # generate the base image data
@@ -47,13 +46,11 @@ def image_file(plugin_dirs):
 
 
 def test_zarr_pyramid(plugin_dirs: tuple[Path, Path], image_file):
-    """
-    Test the creation of a zarr pyramid.
+    """Test the creation of a zarr pyramid.
     The tests are mostly checking that the output zarr is a valid zarr pyramid.
     TODO at this moment, I did not find an authoritative source for specifying
     zarr pyramids.
     """
-
     input_dir, output_dir = plugin_dirs
 
     precompute_slide(input_dir, "Zarr", "image", ".*", output_dir)
@@ -85,14 +82,12 @@ def test_zarr_pyramid(plugin_dirs: tuple[Path, Path], image_file):
             assert f.name == ".zgroup"
 
     # check we have several pyramid levels
-    top_level = zarr.open_group(zarr_top_level_group, mode="r+")
+    zarr.open_group(zarr_top_level_group, mode="r+")
     second_level = zarr.open_group(zarr_second_level_group, mode="r+")
-    # print(top_level.tree())
 
     # TODO Check what is the cutoff. Is it always 12?
     levels = list(second_level.arrays())
     assert len(list(levels)) == 12
-    # print(levels)
 
     # TODO This seems to be because bfio gives you a view
     # the data with shape (X,Y,Z,C,T)
