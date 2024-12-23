@@ -1,4 +1,4 @@
-# Polus Precompute Slide Plugin (1.7.2)
+# Polus Precompute Slide Plugin (1.7.0-dev0)
 
 This WIPP plugin generates image pyramids in multiple viewing formats. Each
 output has a special filepattern variable that will be used to combine images
@@ -37,22 +37,17 @@ This plugin can take four types of input argument and one output argument:
 | Name          | Description                                           | I/O    | Type    |
 | ------------- | ----------------------------------------------------- | ------ | ------- |
 | `inpDir`      | Input image collection (Single Image Planes/Z Stacks) | Input  | Path    |
-| `pyramidType` | DeepZoom/Neuroglancer/Zarr                            | Input  | Enum    |
+| `pyramidType` | DeepZoom/Neuroglancer/Zarr                            | Input  | String  |
 | `filePattern` | Image pattern                                         | Input  | String  |
-| `imageType`   | Neuroglancer type (Intensity/Segmentation)            | Input  | Enum    |
+| `imageType`   | Neuroglancer type (image/segmentation)                | Input  | String  |
 | `outDir`      | Output image pyramid                                  | Output | Pyramid |
 
-### Pyramid Types
+## Run the plugin
 
-Must be one of the following:
+### Run the Docker Container
 
-- `DeepZoom`
-- `Neuroglancer`
-- `Zarr`
-
-### Image Types
-
-Must be one of the following:
-
-- `Intensity`
-- `Segmentation` (Neuroglancer only)
+```bash
+docker run -v /path/to/data:/data labshare/polus-precomputed-slide-tool \
+  --inpDir /data/input \
+  --outDir /data/output
+```

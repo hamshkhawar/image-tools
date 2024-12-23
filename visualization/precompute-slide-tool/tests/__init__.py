@@ -1,4 +1,1 @@
-"""Tests for the pre-compute slide plugin."""
-
-
-from . import helpers
+"""Test package for precompute_slide."""

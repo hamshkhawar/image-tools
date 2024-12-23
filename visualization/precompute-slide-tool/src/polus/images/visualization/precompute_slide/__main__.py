@@ -4,12 +4,11 @@
 import logging
 from os import environ
 from pathlib import Path
-
+from typing_extensions import Annotated
+from enum import Enum
 import typer
-
 from .precompute_slide import precompute_slide
-from .utils import ImageType
-from .utils import PyramidType
+from .utils import PyramidType, ImageType
 
 logging.basicConfig(
     format="%(asctime)s - %(name)-8s - %(levelname)-8s - %(message)s",
@@ -23,11 +22,11 @@ logger.setLevel(POLUS_LOG)
 # TODO CHECK Why do we need that
 POLUS_IMG_EXT = environ.get("POLUS_IMG_EXT", ".ome.tif")
 
-app = typer.Typer(help="Precompute Slide plugin.")
+app = typer.Typer(help="Precompute Slide tool.")
 
 
 @app.command()
-def main(  # noqa: PLR0913
+def main(
     inp_dir: Path = typer.Option(
         ...,
         "--inpDir",
@@ -58,17 +57,17 @@ def main(  # noqa: PLR0913
         resolve_path=True,
     ),
     pyramid_type: PyramidType = typer.Option(
-        "Zarr",
+        PyramidType.zarr,
         "--pyramidType",
         "-p",
         help="type of pyramid. Must be one of ['Neuroglancer','DeepZoom', 'Zarr']",
         case_sensitive=False,
     ),
     image_type: ImageType = typer.Option(
-        "Intensity",
+        ImageType.image,
         "--imageType",
         "-t",
-        help="type of image. Must be one of ['Intensity','Segmentation']",
+        help="type of image. Must be one of ['image','segmentation']",
         case_sensitive=False,
     ),
     preview: bool = typer.Option(
@@ -78,13 +77,8 @@ def main(  # noqa: PLR0913
         help="Preview the output without running the plugin",
         show_default=False,
     ),
-) -> None:
+):
     """Precompute slide plugin command line."""
-    if isinstance(pyramid_type, str):
-        pyramid_type = PyramidType[pyramid_type]
-
-    if isinstance(image_type, str):
-        image_type = ImageType[image_type]
 
     logger.info(f"inpDir: {inp_dir}")
     logger.info(f"filePattern: {filepattern}")
@@ -97,12 +91,10 @@ def main(  # noqa: PLR0913
         inp_dir = inp_dir.joinpath("images")
     logger.info(f"changing input_dir to  {inp_dir}")
     if not inp_dir.exists():
-        msg = "inpDir does not exist"
-        raise ValueError(msg, inp_dir)
+        raise ValueError("inpDir does not exist", inp_dir)
 
     if not out_dir.exists():
-        msg = "outDir does not exist"
-        raise ValueError(msg, out_dir)
+        raise ValueError("outDir does not exist", out_dir)
 
     if preview:
         logger.info("Previewing the output without running the plugin")
@@ -111,11 +103,12 @@ def main(  # noqa: PLR0913
 
     # TODO CHECK THAT
     if (
-        image_type == ImageType.Segmentation
-        and pyramid_type != PyramidType.Neuroglancer
+        image_type == ImageType.segmentation
+        and pyramid_type != PyramidType.neuroglancer
     ):
-        msg = "Segmentation type can only be used for Neuroglancer pyramids."
-        raise ValueError(msg)
+        raise ValueError(
+            "Segmentation type can only be used for Neuroglancer pyramids."
+        )
 
     precompute_slide(inp_dir, pyramid_type, image_type, filepattern, out_dir)
 

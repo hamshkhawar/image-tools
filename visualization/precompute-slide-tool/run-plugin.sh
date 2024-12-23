@@ -12,7 +12,7 @@ container_output_dir="/outDir"
 docker run  -v $inpDir:/${container_input_dir} \
             -v $outDir:/${container_output_dir} \
             --user $(id -u):$(id -g) \
-            polusai/precompute-slide-plugin:${version} \
+            polusai/precompute-slide-tool:${version} \
             --inpDir ${inpDir} \
             --pyramidType ${pyramidType} \
             --filePattern ${filePattern} \

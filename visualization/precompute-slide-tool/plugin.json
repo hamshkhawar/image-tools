@@ -1,7 +1,7 @@
 {
   "name": "Precompute Slide",
-  "version": "1.7.2",
-  "containerId": "polusai/precompute-slide-tool:1.7.2",
+  "version": "1.7.0-dev0",
+  "containerId": "polusai/precompute-slide-tool:1.7.0-dev0",
   "baseCommand": [
     "python3",
     "-m",
@@ -11,7 +11,7 @@
   "description": "Precomputes a plane series in DeepZoom, Neuroglancer, or OME Zarr format.",
   "author": "Madhuri Vihani (Madhuri.Vihani@nih.gov), Nick Schaub (Nick.Schaub@nih.gov), Antoine Gerardin (Antoine.Gerardin@nih.gov), Najib Ishaq (najib.ishaq@nih.gov)",
   "institution": "National Center for Advancing Translational Sciences, National Institutes of Health",
-  "repository": "https://github.com/LabShare/polus-plugins",
+  "repository": "https://github.com/polusai/image-tools",
   "website": "https://ncats.nih.gov/preclinical/core/informatics",
   "citation": "",
   "inputs": [
@@ -36,12 +36,12 @@
     },
     {
       "name": "imageType",
-      "description": "Image is either Segmentation or Intensity",
+      "description": "Image is either Segmentation or Image",
       "type": "enum",
       "options": {
         "values": [
-          "Intensity",
-          "Segmentation"
+          "image",
+          "segmentation"
         ]
       },
       "required": false
@@ -70,15 +70,13 @@
     {
       "key": "inputs.pyramidType",
       "title": "Pyramid Type: ",
-      "description": "Build a DeepZoom, Neuroglancer, or Zarr pyramid?",
-      "default": "Zarr"
+      "description": "Build a DeepZoom, Neuroglancer, or Zarr pyramid?"
     },
     {
       "key": "inputs.imageType",
       "title": "Image Type: ",
       "description": "Image or Segmentation?",
-      "condition": "inputs.pyramidType==Neuroglancer",
-      "default": "Intensity"
+      "condition": "inputs.pyramidType==Neuroglancer"
     },
     {
       "key": "inputs.filePattern",
