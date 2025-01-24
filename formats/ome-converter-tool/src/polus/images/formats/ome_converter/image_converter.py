@@ -82,6 +82,9 @@ def convert_image(
     # Loop through timepoints, channels and z-slices
     with BioReader(inp_image, max_workers=NUM_THREADS) as br:
         for t, c, z in product(range(br.T), range(br.C), range(br.Z)):
+            logger.info(f"T:{range(br.T)}")
+            logger.info(f"C:{range(br.C)}")
+            logger.info(f"Z:{range(br.Z)}")
             extension = "".join(
                 [
                     suffix
