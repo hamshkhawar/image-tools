@@ -1,14 +1,13 @@
 """Provides the function to apply flatfield."""
 
 import logging
-import operator
 import pathlib
 import typing
+from concurrent.futures import ProcessPoolExecutor, as_completed
 
 import bfio
 import numpy
 import numpy as np
-import preadator
 import tqdm
 from filepattern import FilePattern
 
@@ -18,7 +17,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(utils.POLUS_LOG)
 
 
-def apply(  # noqa: PLR0913
+def apply(
     *,
     img_dir: pathlib.Path,
     img_pattern: str,
@@ -53,7 +52,6 @@ def apply(  # noqa: PLR0913
     ff_fp = FilePattern(str(ff_dir), ff_pattern)
     ff_variables = ff_fp.get_variables()
 
-    # check that ff_variables are a subset of img_variables
     if set(ff_variables) - set(img_variables):
         msg = (
             f"Flatfield variables are not a subset of image variables: "
@@ -81,7 +79,6 @@ def apply(  # noqa: PLR0913
         variables = dict(group)
 
         ff_path: pathlib.Path = ff_fp.get_matching(**variables)[0][1][0]
-
         df_path = None if df_fp is None else df_fp.get_matching(**variables)[0][1][0]
 
         if preview:
@@ -154,68 +151,52 @@ def _unshade_batch(
         dtype as the input images. If False, the output images will be saved as
         float32.
     """
-    # Load images
-    with preadator.ProcessManager(
-        name="unshade_batch::load",
-        num_processes=utils.MAX_WORKERS,
-        threads_per_process=2,
-    ) as load_executor:
-        load_futures = []
-        for i, inp_path in enumerate(batch_paths):
-            load_futures.append(
-                load_executor.submit_process(utils.load_img, inp_path, i),
-            )
+    
+    # Load images in parallel
+    images = [None] * len(batch_paths)
+    with ProcessPoolExecutor(max_workers=utils.MAX_WORKERS) as executor:
+        load_futures = {
+            executor.submit(utils.load_img, inp_path, i): i
+            for i, inp_path in enumerate(batch_paths)
+        }
+        for future in as_completed(load_futures):
+            idx, img = future.result()
+            images[idx] = img
 
-        load_executor.join_processes()
-        images = [f.result() for f in load_futures]
-
-    images = [img for _, img in sorted(images, key=operator.itemgetter(0))]
     img_stack = numpy.stack(images, axis=0).astype(numpy.float32)
 
-    # find min and max values of original images (across last 2 axes)
     def get_min_max(img_stack):
         min_val = img_stack.min(axis=(-1, -2), keepdims=True)
         max_val = img_stack.max(axis=(-1, -2), keepdims=True)
         return min_val, max_val
 
-    min_orig, max_orig = get_min_max(img_stack)  # dim: n_images x 1 x 1
+    min_orig, max_orig = get_min_max(img_stack)
 
-    # Apply flatfield correction
     if df_image is not None:
         img_stack -= df_image
 
     img_stack /= ff_image + 1e-8
 
-    # calculate min and max values of corrected images
     min_new, max_new = get_min_max(img_stack)
-
-    # scale corrected images to original range
     img_stack = (img_stack - min_new) / (max_new - min_new) * (
         max_orig - min_orig
     ) + min_orig
 
     if keep_orig_dtype:
         orig_dtype = images[0].dtype
-        # if integer type
         if np.issubdtype(orig_dtype, np.integer):
-            # clip out of range values for orig dtype
             dtype_info = np.iinfo(orig_dtype)
             img_stack = np.clip(img_stack, dtype_info.min, dtype_info.max)
-
-            # round and cast to original dtype
             img_stack = np.round(img_stack).astype(orig_dtype)
-
         elif np.issubdtype(orig_dtype, np.floating):
-            # floating point image, clamp to [0,1]
             img_stack = np.clip(img_stack, 0.0, 1.0)
             img_stack = img_stack.astype(orig_dtype)
 
-    # Save outputs
-    with preadator.ProcessManager(
-        name="unshade_batch::save",
-        num_processes=utils.MAX_WORKERS,
-        threads_per_process=2,
-    ) as save_executor:
-        for inp_path, img in zip(batch_paths, img_stack):
-            save_executor.submit_process(utils.save_img, inp_path, img, out_dir)
-        save_executor.join_processes()
+    # Save images in parallel
+    with ProcessPoolExecutor(max_workers=utils.MAX_WORKERS) as executor:
+        save_futures = [
+            executor.submit(utils.save_img, inp_path, img, out_dir)
+            for inp_path, img in zip(batch_paths, img_stack)
+        ]
+        for future in as_completed(save_futures):
+            future.result()  # raises any exceptions from worker

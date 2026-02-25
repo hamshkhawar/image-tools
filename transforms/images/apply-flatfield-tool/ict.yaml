@@ -2,7 +2,7 @@ author:
 - Nick Schaub
 - Najib Ishaq
 contact: Nick.Schaub@nih.gov
-container: polusai/apply-flatfield-tool:2.0.1-dev0
+container: polusai/apply-flatfield-tool:2.0.1-dev2
 description: Apply a flatfield algorithm to a collection of images.
 entrypoint: python3 -m polus.images.transforms.images.apply_flatfield
 inputs:
@@ -56,7 +56,7 @@ outputs:
   name: outDir
   required: true
   type: path
-repository: https://github.com/labshare/polus-plugins
+repository: https://github.com/polusai/image-tools
 specVersion: 1.0.0
 title: Apply Flatfield
 ui:
@@ -84,4 +84,4 @@ ui:
   key: inputs.preview
   title: Preview Output
   type: checkbox
-version: 2.0.1-dev0
+version: 2.0.1-dev2

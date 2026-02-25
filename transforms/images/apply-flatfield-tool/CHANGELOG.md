@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog],
 and this project adheres to [Semantic Versioning].
 
+## [2.0.1-dev2] - 2026-02-25
+### Added
+udpated dependencies for bfio, typer and filepattern packages
+Replace preadator with multiprocessing
+
 
 ## [2.0.1-dev1] - 2025-01-12
 
