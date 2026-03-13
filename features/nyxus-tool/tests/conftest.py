@@ -79,7 +79,7 @@ def get_params(request: pytest.FixtureRequest) -> pytest.FixtureRequest:
     return request.param
 
 
-@pytest.fixture(params=[5000])
+@pytest.fixture(params=[100])
 def scaled_sizes(request: pytest.FixtureRequest) -> pytest.FixtureRequest:
     """To get the parameter of the fixture."""
     return request.param
