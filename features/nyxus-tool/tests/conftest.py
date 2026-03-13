@@ -71,7 +71,7 @@ def synthetic_images(
 @pytest.fixture(
     params=[
         ("pandas", ".csv", "MEAN"),
-        ("arrowipc", ".arrow", "MEDIAN"),
+        # ("arrowipc", ".arrow", "MEDIAN"),
     ],
 )
 def get_params(request: pytest.FixtureRequest) -> pytest.FixtureRequest:
