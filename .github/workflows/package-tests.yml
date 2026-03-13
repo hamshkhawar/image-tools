@@ -140,15 +140,16 @@ jobs:
           else
             echo "conda_installed=false" >> $GITHUB_ENV
           fi
-      - name: Install Poetry
-        uses: abatilo/actions-poetry@v2
-      - name: Run tests with poetry
+      - name: Install uv
+        if: env.conda_installed == 'false'
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+      - name: Run tests with uv
         if: env.conda_installed == 'false'
         run: |
-          poetry config virtualenvs.create false
-
           package_dir=${{ matrix.package_dir }}
           cd $package_dir
 
-          poetry install
-          python -X faulthandler -m pytest -v -p no:faulthandler
+          uv sync --all-extras
+          uv run python -X faulthandler -m pytest -v -p no:faulthandler
