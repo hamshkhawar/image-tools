@@ -56,15 +56,12 @@ jobs:
       - name: Run pre-commit
         run: |
           cd "${{ matrix.package_dir }}"
-          uv run pre-commit run 
+          uv run pre-commit run --from-ref ${{ github.event.pull_request.base.sha || github.event.before }} --to-ref ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Check for changes
         run: |
-          cd "${{ matrix.package_dir }}"
-          if [[ $(git status --porcelain) ]]; then
-            echo "::error::pre-commit hooks failed for ${{ matrix.package_name }}"
-            exit 1
-          fi
+            cd "${{ matrix.package_dir }}"
+            uv run pre-commit run --from-ref ${{ github.event.pull_request.base.sha || github.event.before }} --to-ref ${{ github.event.pull_request.head.sha || github.sha }}
 
   docker:
     name: Docker | Build ${{ matrix.package_name }}
