@@ -1,17 +1,32 @@
+[build-system]
+requires = [
+  "setuptools",
+  "wheel"
+]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "polus-images-formats-ome-converter"
-version = "0.3.4-dev2"
-description = "Convert BioFormats datatypes to ome.tif or ome.zarr file format"
+dynamic = ["version"]
+description = "Convert BioFormats datatypes to ome.tif or ome.zarr file format."
 readme = "README.md"
+license = { file = "LICENSE" }
 authors = [
-  {name = "Nick Schaub", email = "nick.schaub@nih.gov"},
-  {name = "Hamdah Shafqat abbasi", email = "hamdahshafqat.abbasi@nih.gov"},
-  {name = "Najib Ishaq", email = "najib.ishaq@nih.gov"}
+  { name = "Nick Schaub", email = "nick.schaub@nih.gov" },
+  { name = "Hamdah Shafqat Abbasi", email = "hamdahshafqat.abbasi@nih.gov" },
+  { name = "Najib Ishaq", email = "najib.ishaq@nih.gov" }
 ]
-packages = [{include = "polus", from = "src"}]
-python = ">=3.11,<3.13"
+maintainers = [
+  { name = "Hamdah Shafqat Abbasi", email = "hamdahshafqat.abbasi@nih.gov" }
+]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent"
+]
+requires-python = ">=3.11,<3.13"
 
-# UV expects a sequence, not a map
 dependencies = [
   "bfio==2.5.0",
   "types-tqdm>=4.67.0.20250417",
@@ -29,15 +44,40 @@ dev = [
   "pytest>=7.2.1",
   "ipykernel>=6.21.2",
   "requests>=2.28.2",
+  "matplotlib>=3.9.4",
   "scikit-image>=0.26.0",
-  "matplotlib>=3.9.4"
+  "black>=25.1.0",
+  "flake8>=7.2.0",
+  "mypy>=1.15.0"
 ]
 
+[project.scripts]
+ome-converter = "polus.__main__:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
+namespaces = false
+
+[tool.setuptools.package-data]
+"*" = ["VERSION"]
+
+# Mypy configuration
 [tool.mypy]
 files = "."
 strict = true
 warn_unreachable = true
 warn_no_return = true
 
-[tool.pytest.ini_options]
-pythonpath = ["."]
+[[tool.mypy.overrides]]
+module = "tests.*"
+allow_untyped_defs = true
+disable_error_code = "attr-defined"
+
+# Optional: Codespell configuration
+[tool.codespell]
+skip = "*.svg,*.html"
+ignore-words-list = "output"
