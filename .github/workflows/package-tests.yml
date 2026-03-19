@@ -58,10 +58,14 @@ jobs:
           cd "${{ matrix.package_dir }}"
           uv run pre-commit run --from-ref ${{ github.event.pull_request.base.sha || github.event.before }} --to-ref ${{ github.event.pull_request.head.sha || github.sha }}
 
-      - name: Check for changes
+      - name: Show dirty files (if pre-commit failed)
+        if: failure()
         run: |
-            cd "${{ matrix.package_dir }}"
-            uv run pre-commit run --from-ref ${{ github.event.pull_request.base.sha || github.event.before }} --to-ref ${{ github.event.pull_request.head.sha || github.sha }}
+          cd "${{ matrix.package_dir }}"
+          echo "=== git status ==="
+          git status --porcelain
+          echo "=== git diff ==="
+          git diff
 
   docker:
     name: Docker | Build ${{ matrix.package_name }}
